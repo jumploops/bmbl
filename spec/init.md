@@ -22,11 +22,13 @@
 12. [Extension architecture](#extension-architecture)
 13. [Permissions](#permissions)
 14. [Storage strategy (IndexedDB + settings)](#storage-strategy-indexeddb--settings)
-15. [Performance and reliability](#performance-and-reliability)
-16. [Privacy and security](#privacy-and-security)
-17. [Testing plan](#testing-plan)
-18. [Future roadmap](#future-roadmap)
-19. [Open items / follow-ups](#open-items--follow-ups)
+15. [Styling and design](#styling-and-design)
+16. [Performance and reliability](#performance-and-reliability)
+17. [Privacy and security](#privacy-and-security)
+18. [Testing plan](#testing-plan)
+19. [Project structure](#project-structure)
+20. [Future roadmap](#future-roadmap)
+21. [Implementation decisions](#implementation-decisions)
 
 ---
 
@@ -255,11 +257,11 @@ Each row should contain:
 
 #### Interaction rules
 
-* **Title click**: opens URL in current tab
+* **Title click**: opens URL in a **new tab** (preserves backlog view)
 * **Middle-click / cmd-click**: default browser behavior (open in new tab)
 * **Upvote**: `score += 1`
 * **Downvote**: `score = max(0, score - 1)`
-* **Hide**: `deletedAt = now` (soft delete)
+* **Hide**: `deletedAt = now` (soft delete); shows "Hidden. Undo" toast for 5 seconds
 
 #### Empty state
 
@@ -288,9 +290,14 @@ Each row should contain:
 
 #### Pagination / infinite scroll
 
-* Load first N (e.g., 100)
-* Load more on scroll
-* Prefer list virtualization if dataset grows large
+* Load first **30 items** (matches Hacker News)
+* Load more 30 on scroll
+* Prefer list virtualization if dataset grows large (500+ items)
+
+#### Fallback behaviors
+
+* **Missing favicon**: show Globe icon (from lucide-react)
+* **Missing title**: show domain + path as title
 
 ---
 
@@ -314,7 +321,7 @@ Each row should contain:
 
 ## Data model
 
-> Canonical store is IndexedDB. `chrome.storage.sync` is used for small user settings (so settings can sync later without syncing the whole backlog).
+> Canonical store is IndexedDB via **Dexie.js**. Database name: `bmbl`. Settings use `chrome.storage.sync` (so settings can sync later without syncing the whole backlog).
 
 ### Object stores
 
@@ -333,7 +340,7 @@ Fields:
 * `createdAt: number` (first time seen)
 * `lastSavedAt: number` (most recent time captured)
 * `saveCount: number` (times captured; increments on recapture)
-* `score: number` (integer priority score; min 0)
+* `score: number` (integer priority score; default 1, min 0)
 * `deletedAt?: number | null` (soft delete tombstone)
 * `lastOpenedAt?: number | null` (optional; for future ranking)
 * `updatedAt: number` (future sync-friendly)
@@ -372,7 +379,7 @@ Indexes:
 
 #### `captureEvents` (join table: capture ↔ item)
 
-Key: auto-increment OR compound `(captureId + '|' + itemId)`
+Key: compound `[captureId, itemId]` (prevents duplicates, ensures data integrity)
 
 Fields:
 
@@ -412,7 +419,7 @@ When capturing a tab with `normalizedUrl`:
   * `createdAt = now`
   * `lastSavedAt = now`
   * `saveCount = 1`
-  * `score = 0`
+  * `score = 1` (default starting score)
   * `deletedAt = null`
 
 **If item exists and is NOT deleted**
@@ -451,7 +458,7 @@ When capturing a tab with `normalizedUrl`:
 
 ### Priority score rules
 
-* Score is an integer, `min = 0`, no fixed max.
+* Score is an integer, `default = 1`, `min = 0`, no fixed max.
 * Upvote increments by 1.
 * Downvote decrements by 1 (but never below 0).
 * In priority view, show score prominently.
@@ -498,7 +505,8 @@ Given `url`:
 
 ### Domain extraction
 
-* `domain = hostname` (optionally strip `www.` for display)
+* `domain = hostname` with `www.` stripped for display
+* Display domain only (no path) next to title, matching Hacker News style: `(example.com)`
 
 ---
 
@@ -545,26 +553,33 @@ Create a shared module (usable by service worker + New Tab page), e.g.:
 * `items.setScore(itemId, score)` / `items.incrementScore(itemId)` / `items.decrementScore(itemId)`
 * `items.softDelete(itemId)` / `items.restore(itemId)`
 
-Implementation choice:
+Implementation:
 
-* Use a proven IndexedDB wrapper (recommended) for migrations + indexes.
+* Use **Dexie.js** for IndexedDB with built-in migrations + query builder.
 * Keep DB logic centralized to avoid divergent behavior.
+* Open fresh DB connection per operation (simple/robust for MV3 service worker lifecycle).
 
 ### Message passing
 
-Two valid approaches:
-
-**Approach A (simplest): duplicate capture logic in New Tab page**
-
-* New Tab page performs tab queries + DB writes directly.
-* Pros: fewer moving parts
-* Cons: permission access is still fine; but keep logic DRY via shared modules.
-
-**Approach B (recommended): capture always runs in service worker**
+**Chosen approach: capture always runs in service worker**
 
 * New Tab page sends a message `CAPTURE_ALL_TABS`
 * Service worker runs capture and replies with summary
-* Pros: single source of truth for capture logic
+* Single source of truth for capture logic
+
+### Capture behavior
+
+* **Debouncing**: Ignore subsequent clicks while capture is in progress; show loading icon state
+* **Transaction scope**: One atomic IndexedDB transaction per capture
+* **Pending tabs**: Capture as-is (don't wait for tabs to finish loading)
+* **Large tab counts**: Let it run without progress UI; optimize later if needed
+
+### Icon states
+
+The extension icon changes during capture:
+1. **Default**: Normal bmbl icon
+2. **Capturing**: Loading/spinner icon (static, not animated)
+3. **Success**: Checkmark icon for 5 seconds, then returns to default
 
 ---
 
@@ -598,12 +613,35 @@ Two valid approaches:
 
 ### chrome.storage.sync (settings only)
 
+**Initialization**: On extension install (`chrome.runtime.onInstalled`) + migration for new settings in updates.
+
 Example settings keys:
 
 * `autoCloseAfterSave: boolean` (default false)
 * `resurfaceHiddenOnRecapture: boolean` (default false; likely V1.1)
-* `defaultView: "new" | "old" | "priority" | "frequent"` (default "new")
+* `defaultView: "new" | "old" | "priority" | "frequent"` (default "new") — controls which view loads on new tab
 * `uiDensity: "comfortable" | "compact"` (optional)
+
+---
+
+## Styling and design
+
+### Color palette
+
+* **Header bar**: Purple (instead of HN's orange #ff6600)
+* **Background**: Off-white #f6f6ef (matching HN)
+* **Dark mode**: Supported in V1 (invert colors appropriately)
+
+### Typography
+
+* **Font**: Verdana, Geneva, sans-serif (matching HN exactly)
+* **Density**: Compact, similar to Hacker News
+
+### Responsive
+
+* Responsive layout similar to Hacker News
+* Minimum supported width: reasonable desktop/laptop viewport
+* Mobile browser extensions are out of scope for V1
 
 ---
 
@@ -623,7 +661,7 @@ Example settings keys:
   * invalid URL parsing should be skipped and counted as “skipped invalid”
 * Capture should never partially corrupt state:
 
-  * use a transaction for each capture if possible
+  * use one atomic transaction for entire capture (Dexie.js transaction)
 * If IndexedDB fails to open:
 
   * show error state with fallback instructions:
@@ -693,6 +731,33 @@ Example settings keys:
 
 ---
 
+## Project structure
+
+WXT + React + TypeScript folder structure:
+
+```
+src/
+  entrypoints/
+    background.ts          # Service worker
+    newtab/                # New tab page
+      index.html
+      main.tsx
+    options/               # Settings page
+      index.html
+      main.tsx
+  components/              # Shared React components
+  lib/
+    db/                    # IndexedDB DAL (Dexie.js)
+    capture/               # Capture logic
+    utils/                 # URL normalization, etc.
+  hooks/                   # Custom React hooks
+  types/                   # TypeScript types
+```
+
+**Shared code**: DAL is shared between background + newtab. Types shared everywhere. Components shared between newtab + options.
+
+---
+
 ## Future roadmap
 
 ### V1.1 (quality of life)
@@ -729,48 +794,71 @@ Example settings keys:
 
 ---
 
-## Open items / follow-ups
+## Implementation decisions
 
-These don’t block implementation, but designers/devs should be aware:
+> Quick reference for all decisions made during spec review.
 
-1. **Score UI affordance**
+### Data layer
+| Decision | Choice |
+|----------|--------|
+| IndexedDB wrapper | Dexie.js |
+| Database name | `bmbl` |
+| captureEvents key | Compound `[captureId, itemId]` |
+| Transaction scope | One atomic transaction per capture |
 
-   * V1: up/down arrows + numeric score
-   * Later: “set score” input or quick presets (e.g., +5)
+### Capture behavior
+| Decision | Choice |
+|----------|--------|
+| Debouncing | Ignore clicks while capture in progress |
+| Large tab counts | Let it run, optimize later if needed |
+| Message passing | Capture runs in service worker |
+| Pending tabs | Capture as-is |
 
-   Answer: Up/down with simple numeric "points" with identical UI to hacker news 
+### UI/UX
+| Decision | Choice |
+|----------|--------|
+| Page size | 30 items (matches HN) |
+| Link click | Opens in new tab |
+| Default score | 1 point |
+| Domain display | Strip `www.`, show domain only (no path) |
+| Undo toast | 5 seconds |
+| Favicon fallback | Globe icon |
+| Title fallback | Domain + path |
+| Long titles | Match HN (truncation/wrap) |
+| Favicons | Show them |
+| Recency format | "2h ago" style |
+| List density | Compact (match HN) |
 
-2. **Handling very long titles**
+### Extension icon
+| Decision | Choice |
+|----------|--------|
+| Badge | None (icon only) |
+| Icon states | Default → Loading → Success (5s) → Default |
 
-   * truncation rules, tooltip on hover
+### Settings
+| Decision | Choice |
+|----------|--------|
+| Initialization | On install + migration for new settings |
+| `defaultView` | Controls which view loads on new tab |
 
-   Answer: Let's go identical to hacker news (I believe they have truncation or wrap on mobile?)
+### Styling
+| Decision | Choice |
+|----------|--------|
+| Header color | Purple (not HN orange) |
+| Background | Off-white #f6f6ef |
+| Dark mode | Supported in V1 |
+| Typography | Verdana (match HN exactly) |
+| Responsive | Yes, similar to HN |
 
-3. **Favicons**
-
-   * show or hide by default? (HN doesn’t show icons; optional)
-   Answer: Let's show them 
-
-4. **Recency display**
-
-   * “2h ago” formatting vs absolute time on hover
-
-   Answer: Let's go with "2h ago" style formatting (including days/months/etc.)
-5. **List density**
-
-   * compact vs comfortable spacing
-
-   Answer: compact, similar (almost identical) to Hacker News 
-
-6. **Capture feedback**
-
-   * badge count? toast? subtle “Saved X tabs” banner on New Tab?
-
-   Answer: Ideally we show something in the extension (either the icon itself with a loading indicator/success icon if possible).
+### Deferred to future
+| Item | Notes |
+|------|-------|
+| Incognito mode | Consider in future update |
+| Mobile browsers | Out of scope |
 
 ---
 
-## Designer deliverables (requested screens)
+## Design deliverables (requested screens)
 
 1. **New Tab — “new” view (default)**
 2. **New Tab — “priority” view**
