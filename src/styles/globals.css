@@ -1,0 +1,95 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {
+  --background: hsl(60 9% 94%);
+  --foreground: hsl(0 0% 0%);
+  --muted: hsl(60 4% 89%);
+  --muted-foreground: hsl(0 0% 51%);
+  --primary: hsl(263 70% 58%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(60 4% 89%);
+  --secondary-foreground: hsl(0 0% 0%);
+  --accent: hsl(263 70% 58%);
+  --accent-foreground: hsl(0 0% 100%);
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(0 0% 78%);
+  --ring: hsl(263 70% 58%);
+  --radius: 0.25rem;
+
+  /* HN-style colors */
+  --hn-bg: hsl(60 9% 94%);
+  --hn-header: hsl(263 70% 58%);
+  --hn-header-dark: hsl(263 75% 37%);
+  --hn-text: hsl(0 0% 0%);
+  --hn-text-secondary: hsl(0 0% 51%);
+  --hn-link: hsl(0 0% 0%);
+  --hn-link-visited: hsl(0 0% 51%);
+}
+
+.dark {
+  --background: hsl(0 0% 10%);
+  --foreground: hsl(60 9% 94%);
+  --muted: hsl(0 0% 18%);
+  --muted-foreground: hsl(0 0% 64%);
+  --primary: hsl(263 70% 65%);
+  --primary-foreground: hsl(0 0% 0%);
+  --secondary: hsl(0 0% 18%);
+  --secondary-foreground: hsl(60 9% 94%);
+  --accent: hsl(263 70% 65%);
+  --accent-foreground: hsl(0 0% 0%);
+  --destructive: hsl(0 72% 51%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(0 0% 26%);
+  --ring: hsl(263 70% 65%);
+
+  /* HN-style colors - dark mode */
+  --hn-bg: hsl(0 0% 10%);
+  --hn-header: hsl(263 70% 45%);
+  --hn-header-dark: hsl(263 75% 37%);
+  --hn-text: hsl(60 9% 94%);
+  --hn-text-secondary: hsl(0 0% 64%);
+  --hn-link: hsl(60 9% 94%);
+  --hn-link-visited: hsl(0 0% 64%);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius));
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+
+  /* HN-style theme variables */
+  --color-hn-bg: var(--hn-bg);
+  --color-hn-header: var(--hn-header);
+  --color-hn-header-dark: var(--hn-header-dark);
+  --color-hn-text: var(--hn-text);
+  --color-hn-text-secondary: var(--hn-text-secondary);
+  --color-hn-link: var(--hn-link);
+  --color-hn-link-visited: var(--hn-link-visited);
+
+  /* Typography */
+  --font-hn: Verdana, Geneva, sans-serif;
+}
+
+body {
+  font-family: var(--font-hn);
+  font-size: 10pt;
+  background: var(--background);
+  color: var(--foreground);
+}
