@@ -3,7 +3,14 @@ import { upsertItem } from '@/lib/db/items';
 import { createCapture, insertCaptureEvent } from '@/lib/db/captures';
 import { getSettings } from '@/lib/settings';
 import { setIconState } from './icons';
-import { queryAllTabs, queryAllTabGroups, buildGroupMap, filterAndTransformTabs, closeTabsExcludingPinned } from './tabs';
+import {
+  queryAllTabs,
+  queryAllTabGroups,
+  buildGroupMap,
+  filterAndTransformTabs,
+  closeTabsExcludingPinned,
+  aggregateTabsByUrl,
+} from './tabs';
 import type { CaptureResult, CaptureEvent } from '@/types';
 import { generateId } from '@/lib/utils/uuid';
 
@@ -43,6 +50,9 @@ export async function captureAllTabs(): Promise<CaptureResult> {
     const groupMap = buildGroupMap(allGroups);
     const { capturableTabs, skippedCount } = filterAndTransformTabs(allTabs, groupMap);
 
+    // Aggregate tabs by URL to handle duplicates
+    const aggregatedTabs = aggregateTabsByUrl(capturableTabs, groupMap);
+
     // Prepare capture stats
     let tabCountUpdatedExisting = 0;
     let tabCountInsertedNew = 0;
@@ -54,36 +64,38 @@ export async function captureAllTabs(): Promise<CaptureResult> {
 
     // Use a Dexie transaction for atomicity
     await db.transaction('rw', [db.items, db.captures, db.captureEvents], async () => {
-      // Process each tab
-      for (const tab of capturableTabs) {
+      // Process each UNIQUE URL (not each tab)
+      for (const aggregated of aggregatedTabs) {
+        const tabCount = aggregated.tabs.length;
+
         const { item, isNew, wasDeleted } = await upsertItem(
-          tab.url,
-          tab.title,
-          tab.favIconUrl
+          aggregated.url,
+          aggregated.title || null,
+          aggregated.favIconUrl,
+          tabCount
         );
 
+        // Track stats based on tabs, not unique URLs
         if (isNew) {
-          tabCountInsertedNew++;
+          tabCountInsertedNew += tabCount;
         } else if (wasDeleted) {
-          tabCountAlreadyDeleted++;
+          tabCountAlreadyDeleted += tabCount;
         } else {
-          tabCountUpdatedExisting++;
+          tabCountUpdatedExisting += tabCount;
         }
 
-        // Get group info
-        const groupInfo = tab.groupId !== -1 ? groupMap.get(tab.groupId) : undefined;
-
-        // Create capture event
+        // Create ONE capture event per unique URL
         const event: CaptureEvent = {
           captureId,
           itemId: item.itemId,
           capturedAt,
-          windowId: tab.windowId,
-          tabId: tab.tabId,
-          pinned: tab.pinned,
-          groupId: groupInfo?.groupId ?? null,
-          groupTitle: groupInfo?.title ?? null,
-          groupColor: groupInfo?.color ?? null,
+          tabCount,
+          windowIds: aggregated.windowIds,
+          tabIds: aggregated.tabIds,
+          pinnedAny: aggregated.pinnedAny,
+          groupId: aggregated.groupId,
+          groupTitle: aggregated.groupTitle,
+          groupColor: aggregated.groupColor,
         };
 
         await insertCaptureEvent(event);
@@ -91,12 +103,13 @@ export async function captureAllTabs(): Promise<CaptureResult> {
 
       // Create capture record
       await createCapture({
-        tabCountCaptured: capturableTabs.length,
+        tabCountCaptured: capturableTabs.length, // Total tabs
         tabCountSkippedInternal: skippedCount,
         tabCountUpdatedExisting,
         tabCountInsertedNew,
         tabCountAlreadyDeleted,
         autoCloseEnabled: settings.autoCloseAfterSave,
+        uniqueUrlCount: aggregatedTabs.length, // Unique URLs
       });
     });
 

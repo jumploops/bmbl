@@ -1,10 +1,12 @@
 # Phase 5: Polish & Settings
 
-**Goal**: Complete the extension with the options page, undo toast for hide actions, troubleshooting info, and final polish.
+**Goal**: Complete the extension with the options page, default view integration, troubleshooting info, and final polish.
 
-**Dependencies**: Phase 1-4 (all previous phases)
+**Dependencies**: Phase 1-4, Phase 6 (duplicate tab counting), Phase 7 (favorites redesign)
 
-**Estimated scope**: Small-Medium
+**Estimated scope**: Small
+
+> **Note**: This plan has been updated to reflect changes from Phase 6 (tab aggregation) and Phase 7 (favorites redesign where `score` → `favoritedAt`, `priority` → `favorites`, `upvote`/`downvote` → `favorite`/`unfavorite`).
 
 ---
 
@@ -12,9 +14,7 @@
 
 This phase implements:
 - Options page with settings UI
-- Undo toast notification for hide actions
 - Troubleshooting section
-- Toast/notification system
 - Default view setting integration
 - Final UI polish and consistency
 
@@ -147,6 +147,9 @@ export function useToast(): ToastContextValue {
 ### 3. Update useItems for Undo
 
 **src/hooks/useItems.ts** (update hide function):
+
+> **Note**: The hook now uses `favorite`/`unfavorite` instead of `upvote`/`downvote` (Phase 7 change).
+
 ```tsx
 import { useToast } from '@/contexts/ToastContext';
 
@@ -331,7 +334,7 @@ import type { ViewType } from '@/types';
 const VIEW_OPTIONS: { value: ViewType; label: string }[] = [
   { value: 'new', label: 'New (most recent)' },
   { value: 'old', label: 'Old (oldest first)' },
-  { value: 'priority', label: 'Priority (highest score)' },
+  { value: 'favorites', label: 'Favorites' },
   { value: 'frequent', label: 'Frequent (most saved)' },
 ];
 
@@ -521,6 +524,9 @@ export default function App() {
 ### 10. Extract NewTabContent
 
 **src/entrypoints/newtab/NewTabContent.tsx**:
+
+> **Note**: Updated to use `favorite`/`unfavorite` instead of `upvote`/`downvote` (Phase 7 change).
+
 ```tsx
 import { useView } from '@/contexts/ViewContext';
 import { ItemList } from '@/components/ItemList';
@@ -538,8 +544,8 @@ export function NewTabContent() {
     hasMore,
     loadMore,
     refresh,
-    upvote,
-    downvote,
+    favorite,
+    unfavorite,
     hide,
     unhide,
   } = useItems(currentView);
@@ -581,8 +587,8 @@ export function NewTabContent() {
         isLoading={isLoading}
         hasMore={hasMore}
         onLoadMore={loadMore}
-        onUpvote={upvote}
-        onDownvote={downvote}
+        onFavorite={favorite}
+        onUnfavorite={unfavorite}
         onHide={hide}
         onRestore={unhide}
       />
@@ -704,9 +710,10 @@ a {
 After this phase, verify the complete V1 feature set:
 
 - [ ] **Capture**: Click icon → all tabs saved
-- [ ] **Dedupe**: Same URL → single item with updated saveCount
-- [ ] **Views**: new, old, priority, frequent, hidden all work
-- [ ] **Score**: Upvote/downvote work correctly
+- [ ] **Dedupe**: Same URL → single item with updated saveCount (Phase 6: tabs aggregated by URL)
+- [ ] **Views**: new, old, favorites, frequent, hidden all work
+- [ ] **Favorites**: HN-style triangle arrow to favorite, "unfavorite" link to remove (Phase 7)
+- [ ] **Points**: Display saveCount (automatic relevance from tab captures)
 - [ ] **Hide/Restore**: Items can be hidden and restored
 - [ ] **Pagination**: Infinite scroll loads more items
 - [ ] **Settings**: Auto-close and default view work

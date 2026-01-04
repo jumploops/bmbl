@@ -1,13 +1,30 @@
-import { Globe, ChevronUp, ChevronDown, Trash2, RotateCcw } from 'lucide-react';
+import { Globe, Trash2, RotateCcw } from 'lucide-react';
 import { formatRelativeTime, formatAbsoluteTime } from '@/lib/utils/time';
 import type { Item, ViewType } from '@/types';
+
+function VoteArrow({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-[10px] h-[10px] p-0 border-0 bg-transparent cursor-pointer"
+      title="Add to favorites"
+    >
+      <svg
+        viewBox="0 0 10 10"
+        className="w-[10px] h-[10px] text-hn-text-secondary hover:text-hn-text"
+      >
+        <polygon points="5,0 10,10 0,10" fill="currentColor" />
+      </svg>
+    </button>
+  );
+}
 
 interface ItemRowProps {
   item: Item;
   rank: number;
   view: ViewType;
-  onUpvote: () => void;
-  onDownvote: () => void;
+  onFavorite: () => void;
+  onUnfavorite: () => void;
   onHide: () => void;
   onRestore: () => void;
 }
@@ -16,8 +33,8 @@ export function ItemRow({
   item,
   rank,
   view,
-  onUpvote,
-  onDownvote,
+  onFavorite,
+  onUnfavorite,
   onHide,
   onRestore,
 }: ItemRowProps) {
@@ -30,23 +47,10 @@ export function ItemRow({
         {rank}.
       </span>
 
-      {/* Vote buttons */}
-      <div className="flex flex-col items-center shrink-0 pt-0.5">
-        <button
-          onClick={onUpvote}
-          className="text-hn-text-secondary hover:text-hn-text p-0 leading-none"
-          title="Upvote"
-        >
-          <ChevronUp size={12} strokeWidth={3} />
-        </button>
-        {!isHiddenView && (
-          <button
-            onClick={onDownvote}
-            className="text-hn-text-secondary hover:text-hn-text p-0 leading-none"
-            title="Downvote"
-          >
-            <ChevronDown size={12} strokeWidth={3} />
-          </button>
+      {/* Vote arrow - visible only when not favorited, space preserved */}
+      <div className="w-[14px] shrink-0 flex justify-center pt-1">
+        {!item.favoritedAt && !isHiddenView && (
+          <VoteArrow onClick={onFavorite} />
         )}
       </div>
 
@@ -87,33 +91,36 @@ export function ItemRow({
 
         {/* Line 2: Metadata + Actions */}
         <div className="text-[8pt] text-hn-text-secondary flex items-center gap-2 mt-0.5">
-          <span>{item.score} point{item.score !== 1 ? 's' : ''}</span>
+          <span>{item.saveCount} point{item.saveCount !== 1 ? 's' : ''}</span>
 
           <span title={formatAbsoluteTime(item.lastSavedAt)}>
             saved {formatRelativeTime(item.lastSavedAt)}
           </span>
 
-          {(view === 'frequent' || item.saveCount > 1) && (
-            <span>({item.saveCount}x)</span>
-          )}
-
           {/* Actions */}
           {isHiddenView ? (
             <button
               onClick={onRestore}
-              className="hover:underline flex items-center gap-0.5"
+              className="hover:underline cursor-pointer flex items-center gap-0.5"
             >
               <RotateCcw size={10} />
               restore
             </button>
           ) : (
-            <button
-              onClick={onHide}
-              className="hover:underline flex items-center gap-0.5"
-            >
-              <Trash2 size={10} />
-              hide
-            </button>
+            <>
+              {item.favoritedAt && (
+                <button onClick={onUnfavorite} className="hover:underline cursor-pointer">
+                  unfavorite
+                </button>
+              )}
+              <button
+                onClick={onHide}
+                className="hover:underline cursor-pointer flex items-center gap-0.5"
+              >
+                <Trash2 size={10} />
+                hide
+              </button>
+            </>
           )}
         </div>
       </div>

@@ -9,7 +9,16 @@ const SETTINGS_KEY = 'settings';
 export async function getSettings(): Promise<Settings> {
   const result = await chrome.storage.sync.get(SETTINGS_KEY);
   const stored = result[SETTINGS_KEY] as Partial<Settings> | undefined;
-  return { ...DEFAULT_SETTINGS, ...stored };
+  const settings = { ...DEFAULT_SETTINGS, ...stored };
+
+  // Migrate 'priority' to 'favorites' (Phase 7 migration)
+  if ((settings.defaultView as string) === 'priority') {
+    settings.defaultView = 'favorites';
+    // Persist the migration
+    await updateSettings({ defaultView: 'favorites' });
+  }
+
+  return settings;
 }
 
 /**

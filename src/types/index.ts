@@ -12,7 +12,7 @@ export interface Item {
   createdAt: number;
   lastSavedAt: number;
   saveCount: number;
-  score: number;
+  favoritedAt: number | null; // Timestamp when favorited, null if not
   deletedAt: number | null;
   lastOpenedAt: number | null;
   updatedAt: number;
@@ -27,15 +27,17 @@ export interface Capture {
   tabCountInsertedNew: number;
   tabCountAlreadyDeleted: number;
   autoCloseEnabled: boolean;
+  uniqueUrlCount: number; // Count of unique URLs after deduplication
 }
 
 export interface CaptureEvent {
   captureId: string;
   itemId: string;
   capturedAt: number;
-  windowId: number;
-  tabId: number | null;
-  pinned: boolean;
+  tabCount: number; // Number of tabs with this URL in this capture
+  windowIds: number[]; // All window IDs where URL appeared
+  tabIds: (number | null)[]; // All tab IDs (for debugging/analytics)
+  pinnedAny: boolean; // True if ANY tab with this URL was pinned
   groupId: number | null;
   groupTitle: string | null;
   groupColor: string | null;
@@ -45,7 +47,7 @@ export interface CaptureEvent {
 // Views and Sorting
 // ============================================
 
-export type ViewType = 'new' | 'old' | 'priority' | 'frequent' | 'hidden';
+export type ViewType = 'new' | 'old' | 'favorites' | 'frequent' | 'hidden';
 
 export interface ListOptions {
   view: ViewType;
@@ -87,6 +89,23 @@ export interface TabGroupInfo {
   groupId: number;
   title: string | null;
   color: string | null;
+}
+
+/**
+ * Tabs aggregated by normalized URL for a single capture
+ */
+export interface AggregatedTab {
+  normalizedUrl: string;
+  url: string; // Representative URL (first tab)
+  title: string; // Best available title
+  favIconUrl: string | null; // Best available favicon
+  tabs: TabInfo[]; // All tabs with this URL
+  windowIds: number[];
+  tabIds: (number | null)[];
+  pinnedAny: boolean;
+  groupId: number | null;
+  groupTitle: string | null;
+  groupColor: string | null;
 }
 
 // ============================================

@@ -16,8 +16,8 @@ function NewTabContent() {
     hasMore,
     loadMore,
     refresh,
-    upvote,
-    downvote,
+    favorite,
+    unfavorite,
     hide,
     unhide,
   } = useItems(currentView);
@@ -50,8 +50,8 @@ function NewTabContent() {
         isLoading={isLoading}
         hasMore={hasMore}
         onLoadMore={loadMore}
-        onUpvote={upvote}
-        onDownvote={downvote}
+        onFavorite={favorite}
+        onUnfavorite={unfavorite}
         onHide={hide}
         onRestore={unhide}
       />

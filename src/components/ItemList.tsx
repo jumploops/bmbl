@@ -10,8 +10,8 @@ interface ItemListProps {
   hasMore: boolean;
   startRank?: number;
   onLoadMore: () => void;
-  onUpvote: (itemId: string) => void;
-  onDownvote: (itemId: string) => void;
+  onFavorite: (itemId: string) => void;
+  onUnfavorite: (itemId: string) => void;
   onHide: (itemId: string) => void;
   onRestore: (itemId: string) => void;
 }
@@ -23,8 +23,8 @@ export function ItemList({
   hasMore,
   startRank = 1,
   onLoadMore,
-  onUpvote,
-  onDownvote,
+  onFavorite,
+  onUnfavorite,
   onHide,
   onRestore,
 }: ItemListProps) {
@@ -56,8 +56,8 @@ export function ItemList({
           item={item}
           rank={startRank + index}
           view={view}
-          onUpvote={() => onUpvote(item.itemId)}
-          onDownvote={() => onDownvote(item.itemId)}
+          onFavorite={() => onFavorite(item.itemId)}
+          onUnfavorite={() => onUnfavorite(item.itemId)}
           onHide={() => onHide(item.itemId)}
           onRestore={() => onRestore(item.itemId)}
         />

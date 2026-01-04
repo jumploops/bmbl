@@ -5,11 +5,13 @@ import { generateId } from '@/lib/utils/uuid';
 
 /**
  * Create a new item from tab info
+ * @param tabCount - Number of tabs with this URL (for relevance scoring)
  */
 export function createItemFromTab(
   url: string,
   title: string | null,
-  favIconUrl: string | null
+  favIconUrl: string | null,
+  tabCount: number = 1
 ): Omit<Item, 'itemId'> {
   const now = Date.now();
   const normalizedUrl = normalizeUrl(url);
@@ -24,8 +26,8 @@ export function createItemFromTab(
     favIconUrl,
     createdAt: now,
     lastSavedAt: now,
-    saveCount: 1,
-    score: 1, // Default score is 1
+    saveCount: tabCount, // Start with tabCount, not always 1
+    favoritedAt: null, // Not favorited by default
     deletedAt: null,
     lastOpenedAt: null,
     updatedAt: now,
@@ -34,12 +36,14 @@ export function createItemFromTab(
 
 /**
  * Upsert an item (create or update based on normalizedUrl)
+ * @param tabCount - Number of tabs with this URL (for relevance scoring)
  * Returns: { item, isNew, wasDeleted }
  */
 export async function upsertItem(
   url: string,
   title: string | null,
-  favIconUrl: string | null
+  favIconUrl: string | null,
+  tabCount: number = 1
 ): Promise<{ item: Item; isNew: boolean; wasDeleted: boolean }> {
   const normalizedUrl = normalizeUrl(url);
 
@@ -50,7 +54,7 @@ export async function upsertItem(
 
   if (!existing) {
     // Create new item
-    const itemData = createItemFromTab(url, title, favIconUrl);
+    const itemData = createItemFromTab(url, title, favIconUrl, tabCount);
     const item: Item = {
       itemId: generateId(),
       ...itemData,
@@ -69,10 +73,10 @@ export async function upsertItem(
     title: displayTitle,
     favIconUrl,
     lastSavedAt: now,
-    saveCount: existing.saveCount + 1,
+    saveCount: existing.saveCount + tabCount, // Increment by tabCount, not always 1
     updatedAt: now,
     // Keep deletedAt as-is (don't resurrect)
-    // Keep score as-is
+    // Keep favoritedAt as-is
   };
 
   await db.items.update(existing.itemId, updates);
@@ -97,8 +101,8 @@ export async function listItemsV2(options: ListOptions): Promise<Item[]> {
     case 'frequent':
       items = items.filter(item => item.deletedAt === null);
       break;
-    case 'priority':
-      items = items.filter(item => item.deletedAt === null && item.score > 0);
+    case 'favorites':
+      items = items.filter(item => item.deletedAt === null && item.favoritedAt !== null);
       break;
     case 'hidden':
       items = items.filter(item => item.deletedAt !== null);
@@ -113,9 +117,12 @@ export async function listItemsV2(options: ListOptions): Promise<Item[]> {
     case 'old':
       items.sort((a, b) => a.lastSavedAt - b.lastSavedAt);
       break;
-    case 'priority':
+    case 'favorites':
+      // Sort by when favorited, most recent first
       items.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
+        const aFav = a.favoritedAt || 0;
+        const bFav = b.favoritedAt || 0;
+        if (bFav !== aFav) return bFav - aFav;
         return b.lastSavedAt - a.lastSavedAt;
       });
       break;
@@ -142,31 +149,21 @@ export async function getItem(itemId: string): Promise<Item | undefined> {
 }
 
 /**
- * Increment score by 1
+ * Add item to favorites
  */
-export async function incrementScore(itemId: string): Promise<void> {
-  await db.items.where('itemId').equals(itemId).modify(item => {
-    item.score += 1;
-    item.updatedAt = Date.now();
-  });
-}
-
-/**
- * Decrement score by 1 (min 0)
- */
-export async function decrementScore(itemId: string): Promise<void> {
-  await db.items.where('itemId').equals(itemId).modify(item => {
-    item.score = Math.max(0, item.score - 1);
-    item.updatedAt = Date.now();
-  });
-}
-
-/**
- * Set score to a specific value
- */
-export async function setScore(itemId: string, score: number): Promise<void> {
+export async function setFavorite(itemId: string): Promise<void> {
   await db.items.update(itemId, {
-    score: Math.max(0, score),
+    favoritedAt: Date.now(),
+    updatedAt: Date.now(),
+  });
+}
+
+/**
+ * Remove item from favorites
+ */
+export async function unsetFavorite(itemId: string): Promise<void> {
+  await db.items.update(itemId, {
+    favoritedAt: null,
     updatedAt: Date.now(),
   });
 }

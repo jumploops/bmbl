@@ -5,7 +5,7 @@ import type { ViewType } from '@/types';
 const NAV_ITEMS: { view: ViewType; label: string }[] = [
   { view: 'new', label: 'new' },
   { view: 'old', label: 'old' },
-  { view: 'priority', label: 'priority' },
+  { view: 'favorites', label: 'favorites' },
   { view: 'frequent', label: 'frequent' },
   { view: 'hidden', label: 'hidden' },
 ];
@@ -24,7 +24,7 @@ export function Header() {
             <button
               onClick={() => setView(item.view)}
               className={cn(
-                'hover:underline',
+                'hover:underline cursor-pointer',
                 currentView === item.view && 'font-bold'
               )}
             >

@@ -1,8 +1,9 @@
 # Bug: Duplicate URL Capture Error
 
 **Date**: 2026-01-04
-**Status**: Investigating
+**Status**: Fixed
 **Severity**: High (blocks core functionality)
+**Fix**: Phase 6 implementation (see `plan/phase-6-duplicate-tab-counting.md`)
 
 ---
 

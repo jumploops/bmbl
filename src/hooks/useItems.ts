@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { listItemsV2, incrementScore, decrementScore, softDelete, restore } from '@/lib/db/items';
+import { listItemsV2, setFavorite, unsetFavorite, softDelete, restore } from '@/lib/db/items';
 import type { Item, ViewType } from '@/types';
 
 const PAGE_SIZE = 30;
@@ -11,8 +11,8 @@ interface UseItemsReturn {
   hasMore: boolean;
   loadMore: () => Promise<void>;
   refresh: () => Promise<void>;
-  upvote: (itemId: string) => Promise<void>;
-  downvote: (itemId: string) => Promise<void>;
+  favorite: (itemId: string) => Promise<void>;
+  unfavorite: (itemId: string) => Promise<void>;
   hide: (itemId: string) => Promise<void>;
   unhide: (itemId: string) => Promise<void>;
 }
@@ -81,43 +81,49 @@ export function useItems(view: ViewType): UseItemsReturn {
     }
   }, [view]);
 
-  const upvote = useCallback(async (itemId: string) => {
+  const favorite = useCallback(async (itemId: string) => {
+    const now = Date.now();
     // Optimistic update
     setItems((prev) =>
       prev.map((item) =>
-        item.itemId === itemId ? { ...item, score: item.score + 1 } : item
+        item.itemId === itemId ? { ...item, favoritedAt: now } : item
       )
     );
 
     try {
-      await incrementScore(itemId);
+      await setFavorite(itemId);
     } catch {
       // Revert on error
       setItems((prev) =>
         prev.map((item) =>
-          item.itemId === itemId ? { ...item, score: item.score - 1 } : item
+          item.itemId === itemId ? { ...item, favoritedAt: null } : item
         )
       );
     }
   }, []);
 
-  const downvote = useCallback(async (itemId: string) => {
+  const unfavorite = useCallback(async (itemId: string) => {
+    // Store original value for revert
+    const originalFavoritedAt = items.find(i => i.itemId === itemId)?.favoritedAt;
+
     // Optimistic update
     setItems((prev) =>
       prev.map((item) =>
-        item.itemId === itemId
-          ? { ...item, score: Math.max(0, item.score - 1) }
-          : item
+        item.itemId === itemId ? { ...item, favoritedAt: null } : item
       )
     );
 
     try {
-      await decrementScore(itemId);
+      await unsetFavorite(itemId);
     } catch {
-      // Revert on error (would need to track original score)
-      await refresh();
+      // Revert on error
+      setItems((prev) =>
+        prev.map((item) =>
+          item.itemId === itemId ? { ...item, favoritedAt: originalFavoritedAt ?? null } : item
+        )
+      );
     }
-  }, [refresh]);
+  }, [items]);
 
   const hide = useCallback(async (itemId: string) => {
     // Optimistic update - remove from list
@@ -148,8 +154,8 @@ export function useItems(view: ViewType): UseItemsReturn {
     hasMore,
     loadMore,
     refresh,
-    upvote,
-    downvote,
+    favorite,
+    unfavorite,
     hide,
     unhide,
   };
