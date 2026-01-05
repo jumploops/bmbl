@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { useSettings } from '@/hooks/useSettings';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { useImportExport } from '@/hooks/useImportExport';
 import { Toggle } from '@/components/ui/Toggle';
 import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
 import type { ViewType, DarkMode } from '@/types';
 
 const VIEW_OPTIONS: { value: ViewType; label: string }[] = [
@@ -20,6 +23,25 @@ const DARK_MODE_OPTIONS: { value: DarkMode; label: string }[] = [
 export default function App() {
   const { settings, isLoading, updateSetting } = useSettings();
   useDarkMode(settings.darkMode); // Apply dark mode class to html
+
+  // Import/Export state
+  const [includeHidden, setIncludeHidden] = useState(false);
+  const [conflictStrategy, setConflictStrategy] = useState<'skip' | 'merge'>('skip');
+  const {
+    exportBookmarks,
+    isExporting,
+    fileInputRef,
+    openFilePicker,
+    handleFileSelect,
+    validation,
+    clearValidation,
+    confirmImport,
+    isValidating,
+    isImporting,
+    status,
+    message,
+    clearMessage,
+  } = useImportExport();
 
   if (isLoading) {
     return (
@@ -102,6 +124,180 @@ export default function App() {
               onChange={(value) => updateSetting('darkMode', value)}
               options={DARK_MODE_OPTIONS}
             />
+          </div>
+        </section>
+
+        {/* Data Section */}
+        <section className="mb-8">
+          <h2 className="text-base font-bold mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
+            Data
+          </h2>
+
+          {/* Status message */}
+          {message && (
+            <div
+              className={`mb-4 p-3 rounded text-sm ${
+                status === 'success'
+                  ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+                  : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
+              }`}
+            >
+              <div className="flex justify-between items-center">
+                <span>{message}</span>
+                <button
+                  onClick={clearMessage}
+                  className="text-current hover:opacity-70 ml-2"
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Export */}
+          <div className="py-3 border-b border-gray-100 dark:border-gray-700">
+            <h3 className="font-medium mb-2">Export Bookmarks</h3>
+            <p className="text-sm text-hn-text-secondary mb-3">
+              Download your bmbl bookmarks as a JSON file.
+            </p>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeHidden}
+                  onChange={(e) => setIncludeHidden(e.target.checked)}
+                  className="rounded"
+                />
+                Include hidden items
+              </label>
+              <Button
+                onClick={() => exportBookmarks({ includeHidden })}
+                disabled={isExporting}
+                size="sm"
+              >
+                {isExporting ? 'Exporting...' : 'Export JSON'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Import */}
+          <div className="py-3">
+            <h3 className="font-medium mb-2">Import Bookmarks</h3>
+            <p className="text-sm text-hn-text-secondary mb-3">
+              Import bookmarks from a bmbl export file.
+            </p>
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+
+            {!validation ? (
+              // File picker
+              <Button
+                onClick={openFilePicker}
+                disabled={isValidating}
+                variant="secondary"
+                size="sm"
+              >
+                {isValidating ? 'Validating...' : 'Choose File'}
+              </Button>
+            ) : (
+              // Validation results / Import confirmation
+              <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-4">
+                {validation.valid ? (
+                  <>
+                    <p className="text-sm mb-3">
+                      Found <strong>{validation.stats.validItems}</strong> bookmarks to import.
+                      {validation.stats.duplicateUrls > 0 && (
+                        <span className="text-hn-text-secondary">
+                          {' '}({validation.stats.duplicateUrls} duplicates in file will be skipped)
+                        </span>
+                      )}
+                    </p>
+
+                    {validation.warnings.length > 0 && (
+                      <div className="text-sm text-amber-600 dark:text-amber-400 mb-3">
+                        <p className="font-medium mb-1">Warnings:</p>
+                        <ul className="list-disc list-inside">
+                          {validation.warnings.slice(0, 3).map((w, i) => (
+                            <li key={i}>{w}</li>
+                          ))}
+                          {validation.warnings.length > 3 && (
+                            <li>...and {validation.warnings.length - 3} more</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="mb-4">
+                      <p className="text-sm font-medium mb-2">When URL already exists:</p>
+                      <div className="flex gap-4 text-sm">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="conflictStrategy"
+                            value="skip"
+                            checked={conflictStrategy === 'skip'}
+                            onChange={() => setConflictStrategy('skip')}
+                          />
+                          Skip (keep existing)
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="conflictStrategy"
+                            value="merge"
+                            checked={conflictStrategy === 'merge'}
+                            onChange={() => setConflictStrategy('merge')}
+                          />
+                          Merge (combine metadata)
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => confirmImport({ conflictStrategy })}
+                        disabled={isImporting}
+                        size="sm"
+                      >
+                        {isImporting ? 'Importing...' : 'Import'}
+                      </Button>
+                      <Button
+                        onClick={clearValidation}
+                        variant="secondary"
+                        size="sm"
+                        disabled={isImporting}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-red-600 dark:text-red-400 mb-3">
+                      Invalid file:
+                    </p>
+                    <ul className="text-sm text-red-600 dark:text-red-400 list-disc list-inside mb-3">
+                      {validation.errors.slice(0, 5).map((e, i) => (
+                        <li key={i}>{e}</li>
+                      ))}
+                      {validation.errors.length > 5 && (
+                        <li>...and {validation.errors.length - 5} more errors</li>
+                      )}
+                    </ul>
+                    <Button onClick={clearValidation} variant="secondary" size="sm">
+                      Try Another File
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </section>
 
