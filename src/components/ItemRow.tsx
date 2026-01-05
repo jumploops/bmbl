@@ -43,7 +43,7 @@ export function ItemRow({
   return (
     <div className="flex items-start gap-1 py-1">
       {/* Rank */}
-      <span className="text-hn-text-secondary w-8 text-right shrink-0">
+      <span className="text-hn-text-secondary w-5 text-right shrink-0">
         {rank}.
       </span>
 
@@ -57,36 +57,37 @@ export function ItemRow({
       {/* Content */}
       <div className="flex-1 min-w-0">
         {/* Line 1: Title + Domain */}
-        <div className="flex items-center gap-1 flex-wrap">
+        <div className="flex items-start gap-1">
           {/* Favicon */}
           {item.favIconUrl ? (
             <img
               src={item.favIconUrl}
               alt=""
-              className="w-4 h-4 shrink-0"
+              className="w-4 h-4 shrink-0 mt-0.5"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
               }}
             />
           ) : (
-            <Globe size={14} className="text-hn-text-secondary shrink-0" />
+            <Globe size={14} className="text-hn-text-secondary shrink-0 mt-0.5" />
           )}
 
-          {/* Title */}
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-hn-link hover:underline break-words"
-            title={item.url}
-          >
-            {item.title}
-          </a>
-
-          {/* Domain */}
-          <span className="text-hn-text-secondary text-[8pt]">
-            ({item.domain})
-          </span>
+          {/* Title + Domain wrapper */}
+          <div>
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-hn-link hover:underline break-words"
+              title={item.url}
+            >
+              {item.title}
+            </a>
+            {' '}
+            <span className="text-hn-text-secondary text-[8pt]">
+              ({item.domain})
+            </span>
+          </div>
         </div>
 
         {/* Line 2: Metadata + Actions */}

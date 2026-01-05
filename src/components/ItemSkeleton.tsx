@@ -8,7 +8,7 @@ export function ItemSkeleton({ count = 5 }: ItemSkeletonProps) {
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex items-start gap-1 py-1 animate-pulse">
           {/* Rank */}
-          <div className="w-8 h-4 bg-muted rounded" />
+          <div className="w-5 h-4 bg-muted rounded" />
 
           {/* Vote placeholder */}
           <div className="w-3 h-6 bg-muted rounded" />
