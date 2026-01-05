@@ -1,7 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Use class-based dark mode instead of media query */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
+  color-scheme: light;
   --background: hsl(60 9% 94%);
   --foreground: hsl(0 0% 0%);
   --muted: hsl(60 4% 89%);
@@ -29,6 +33,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: hsl(0 0% 10%);
   --foreground: hsl(60 9% 94%);
   --muted: hsl(0 0% 18%);

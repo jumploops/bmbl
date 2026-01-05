@@ -59,16 +59,20 @@ export interface ListOptions {
 // Settings
 // ============================================
 
+export type DarkMode = 'system' | 'light' | 'dark';
+
 export interface Settings {
   autoCloseAfterSave: boolean;
   resurfaceHiddenOnRecapture: boolean;
   defaultView: ViewType;
+  darkMode: DarkMode;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   autoCloseAfterSave: false,
   resurfaceHiddenOnRecapture: false,
   defaultView: 'new',
+  darkMode: 'system',
 };
 
 // ============================================

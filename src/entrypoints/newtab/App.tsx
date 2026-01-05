@@ -6,9 +6,11 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { useItems } from '@/hooks/useItems';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { useCaptureListener } from '@/hooks/useCaptureListener';
+import { useSettings } from '@/hooks/useSettings';
 
 function NewTabContent() {
-  const { currentView } = useView();
+  const { currentView, isLoading: viewLoading } = useView();
   const {
     items,
     isLoading,
@@ -21,6 +23,18 @@ function NewTabContent() {
     hide,
     unhide,
   } = useItems(currentView);
+
+  // Listen for capture completion and refresh the list
+  useCaptureListener(refresh);
+
+  // Wait for view settings to load
+  if (viewLoading) {
+    return (
+      <main className="py-2">
+        <ItemSkeleton count={10} />
+      </main>
+    );
+  }
 
   // Error state
   if (error && items.length === 0) {
@@ -60,13 +74,16 @@ function NewTabContent() {
 }
 
 export default function App() {
-  useDarkMode(); // Apply dark mode class to html
+  const { settings } = useSettings();
+  useDarkMode(settings.darkMode); // Apply dark mode class to html
 
   return (
     <ViewProvider>
       <div className="min-h-screen bg-hn-bg text-hn-text dark:bg-hn-bg dark:text-hn-text font-[family-name:var(--font-hn)] text-[10pt]">
-        <Header />
-        <NewTabContent />
+        <div className="w-full lg:w-[85%] mx-auto">
+          <Header />
+          <NewTabContent />
+        </div>
       </div>
     </ViewProvider>
   );

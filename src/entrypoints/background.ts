@@ -26,6 +26,9 @@ export default defineBackground(() => {
     try {
       const result = await captureAllTabs();
       console.log('Capture complete:', result);
+
+      // Signal capture complete via storage (for live refresh in new tab pages)
+      await chrome.storage.local.set({ lastCaptureTime: Date.now() });
     } catch (error) {
       console.error('Capture failed:', error);
       await resetIcon();

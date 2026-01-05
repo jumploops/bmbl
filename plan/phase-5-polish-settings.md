@@ -16,181 +16,14 @@ This phase implements:
 - Options page with settings UI
 - Troubleshooting section
 - Default view setting integration
+- Live refresh when capture completes
 - Final UI polish and consistency
 
 ---
 
 ## Implementation Steps
 
-### 1. Toast System
-
-**src/components/Toast.tsx**
-```tsx
-import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
-import { cn } from '@/lib/utils/cn';
-
-export interface ToastData {
-  id: string;
-  message: string;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
-  duration?: number; // ms, default 5000
-}
-
-interface ToastProps extends ToastData {
-  onDismiss: () => void;
-}
-
-export function Toast({ message, action, duration = 5000, onDismiss }: ToastProps) {
-  useEffect(() => {
-    const timer = setTimeout(onDismiss, duration);
-    return () => clearTimeout(timer);
-  }, [duration, onDismiss]);
-
-  return (
-    <div className="bg-gray-800 text-white px-4 py-2 rounded shadow-lg flex items-center gap-3 text-sm">
-      <span>{message}</span>
-
-      {action && (
-        <button
-          onClick={() => {
-            action.onClick();
-            onDismiss();
-          }}
-          className="font-bold hover:underline"
-        >
-          {action.label}
-        </button>
-      )}
-
-      <button
-        onClick={onDismiss}
-        className="text-gray-400 hover:text-white ml-2"
-        aria-label="Dismiss"
-      >
-        <X size={14} />
-      </button>
-    </div>
-  );
-}
-
-interface ToastContainerProps {
-  toasts: ToastData[];
-  onDismiss: (id: string) => void;
-}
-
-export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
-  if (toasts.length === 0) return null;
-
-  return (
-    <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
-      {toasts.map((toast) => (
-        <Toast
-          key={toast.id}
-          {...toast}
-          onDismiss={() => onDismiss(toast.id)}
-        />
-      ))}
-    </div>
-  );
-}
-```
-
-### 2. Toast Context
-
-**src/contexts/ToastContext.tsx**
-```tsx
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { ToastContainer, type ToastData } from '@/components/Toast';
-import { generateId } from '@/lib/utils/uuid';
-
-interface ToastContextValue {
-  showToast: (toast: Omit<ToastData, 'id'>) => string;
-  dismissToast: (id: string) => void;
-}
-
-const ToastContext = createContext<ToastContextValue | null>(null);
-
-export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = useState<ToastData[]>([]);
-
-  const showToast = useCallback((toast: Omit<ToastData, 'id'>): string => {
-    const id = generateId();
-    setToasts((prev) => [...prev, { ...toast, id }]);
-    return id;
-  }, []);
-
-  const dismissToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  return (
-    <ToastContext.Provider value={{ showToast, dismissToast }}>
-      {children}
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-    </ToastContext.Provider>
-  );
-}
-
-export function useToast(): ToastContextValue {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
-  }
-  return context;
-}
-```
-
-### 3. Update useItems for Undo
-
-**src/hooks/useItems.ts** (update hide function):
-
-> **Note**: The hook now uses `favorite`/`unfavorite` instead of `upvote`/`downvote` (Phase 7 change).
-
-```tsx
-import { useToast } from '@/contexts/ToastContext';
-
-// Inside useItems hook, update the hide function:
-
-const { showToast } = useToast();
-
-const hide = useCallback(async (itemId: string) => {
-  // Find the item before removing
-  const itemToHide = items.find(item => item.itemId === itemId);
-
-  // Optimistic update - remove from list
-  setItems((prev) => prev.filter((item) => item.itemId !== itemId));
-
-  try {
-    await softDelete(itemId);
-
-    // Show undo toast
-    showToast({
-      message: 'Hidden.',
-      action: {
-        label: 'Undo',
-        onClick: async () => {
-          await restore(itemId);
-          // Re-add item to list if we still have reference
-          if (itemToHide) {
-            setItems((prev) => [{ ...itemToHide, deletedAt: null }, ...prev]);
-          } else {
-            await refresh();
-          }
-        },
-      },
-      duration: 5000,
-    });
-  } catch {
-    await refresh();
-  }
-}, [items, refresh, showToast]);
-```
-
-### 4. Settings Hook
+### 1. Settings Hook
 
 **src/hooks/useSettings.ts**
 ```tsx
@@ -241,7 +74,7 @@ export function useSettings(): UseSettingsReturn {
 }
 ```
 
-### 5. Toggle Component
+### 2. Toggle Component
 
 **src/components/ui/Toggle.tsx**
 ```tsx
@@ -279,7 +112,7 @@ export function Toggle({ checked, onChange, disabled, id }: ToggleProps) {
 }
 ```
 
-### 6. Select Component
+### 3. Select Component
 
 **src/components/ui/Select.tsx**
 ```tsx
@@ -322,7 +155,7 @@ export function Select<T extends string>({
 }
 ```
 
-### 7. Options Page App
+### 4. Options Page App
 
 **src/entrypoints/options/App.tsx**
 ```tsx
@@ -444,7 +277,7 @@ export default function App() {
 }
 ```
 
-### 8. Update ViewContext for Default View
+### 5. Update ViewContext for Default View
 
 **src/contexts/ViewContext.tsx** (update to use settings):
 ```tsx
@@ -495,109 +328,60 @@ export function useView(): ViewContextValue {
 }
 ```
 
-### 9. Update New Tab App with Toast Provider
+### 6. Live Refresh Hook
 
-**src/entrypoints/newtab/App.tsx**:
+**src/hooks/useCaptureListener.ts**
+
+> **Note**: Uses `chrome.storage.onChanged` instead of `chrome.runtime.onMessage` because storage changes are more reliable for cross-context communication in MV3 extensions.
+
 ```tsx
-import { ViewProvider } from '@/contexts/ViewContext';
-import { ToastProvider } from '@/contexts/ToastContext';
-import { Header } from '@/components/Header';
-import { NewTabContent } from './NewTabContent';
-import { useDarkMode } from '@/hooks/useDarkMode';
+import { useEffect } from 'react';
 
-export default function App() {
-  useDarkMode();
+/**
+ * Listens for capture completion by watching chrome.storage.local changes.
+ * This is more reliable than chrome.runtime.sendMessage for MV3 extensions,
+ * as storage changes are guaranteed to fire in all extension contexts.
+ */
+export function useCaptureListener(onCaptureComplete: () => void): void {
+  useEffect(() => {
+    const listener = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
+      if (areaName === 'local' && changes.lastCaptureTime) {
+        onCaptureComplete();
+      }
+    };
 
-  return (
-    <ToastProvider>
-      <ViewProvider>
-        <div className="min-h-screen bg-hn-bg dark:bg-hn-bg-dark font-hn text-[10pt]">
-          <Header />
-          <NewTabContent />
-        </div>
-      </ViewProvider>
-    </ToastProvider>
-  );
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  }, [onCaptureComplete]);
 }
 ```
 
-### 10. Extract NewTabContent
+### 7. Update Background Script
 
-**src/entrypoints/newtab/NewTabContent.tsx**:
-
-> **Note**: Updated to use `favorite`/`unfavorite` instead of `upvote`/`downvote` (Phase 7 change).
-
-```tsx
-import { useView } from '@/contexts/ViewContext';
-import { ItemList } from '@/components/ItemList';
-import { ItemSkeleton } from '@/components/ItemSkeleton';
-import { EmptyState } from '@/components/EmptyState';
-import { ErrorState } from '@/components/ErrorState';
-import { useItems } from '@/hooks/useItems';
-
-export function NewTabContent() {
-  const { currentView, isLoading: viewLoading } = useView();
-  const {
-    items,
-    isLoading,
-    error,
-    hasMore,
-    loadMore,
-    refresh,
-    favorite,
-    unfavorite,
-    hide,
-    unhide,
-  } = useItems(currentView);
-
-  // Wait for view settings to load
-  if (viewLoading) {
-    return (
-      <main className="py-2">
-        <ItemSkeleton count={10} />
-      </main>
-    );
-  }
-
-  // Error state
-  if (error && items.length === 0) {
-    return <ErrorState message={error} onRetry={refresh} />;
-  }
-
-  // Loading state (initial load)
-  if (isLoading && items.length === 0) {
-    return (
-      <main className="py-2">
-        <ItemSkeleton count={10} />
-      </main>
-    );
-  }
-
-  // Empty state
-  if (!isLoading && items.length === 0) {
-    return <EmptyState />;
-  }
-
-  // Loaded state
-  return (
-    <main className="py-2">
-      <ItemList
-        items={items}
-        view={currentView}
-        isLoading={isLoading}
-        hasMore={hasMore}
-        onLoadMore={loadMore}
-        onFavorite={favorite}
-        onUnfavorite={unfavorite}
-        onHide={hide}
-        onRestore={unhide}
-      />
-    </main>
-  );
-}
+**src/entrypoints/background.ts** (add after capture completes):
+```typescript
+// Signal capture complete via storage (for live refresh in new tab pages)
+// This is more reliable than chrome.runtime.sendMessage in MV3
+await chrome.storage.local.set({ lastCaptureTime: Date.now() });
 ```
 
-### 11. Dark Mode Polish
+### 8. Update New Tab App
+
+**src/entrypoints/newtab/App.tsx** (add live refresh):
+```tsx
+import { useCaptureListener } from '@/hooks/useCaptureListener';
+
+// Inside NewTabContent component:
+const { refresh } = useItems(currentView);
+
+// Listen for capture completion and refresh the list
+useCaptureListener(refresh);
+```
+
+### 9. Dark Mode Polish
 
 Update **src/styles/globals.css** with comprehensive dark mode:
 ```css
@@ -647,17 +431,15 @@ a {
 
 | File | Purpose |
 |------|---------|
-| `src/components/Toast.tsx` | Toast component |
-| `src/contexts/ToastContext.tsx` | Toast state management |
 | `src/components/ui/Toggle.tsx` | Toggle switch component |
 | `src/components/ui/Select.tsx` | Select dropdown component |
 | `src/hooks/useSettings.ts` | Settings hook |
+| `src/hooks/useCaptureListener.ts` | Listen for capture completion |
 | `src/entrypoints/options/App.tsx` | Options page (update) |
-| `src/contexts/ViewContext.tsx` | View context (update with default) |
-| `src/entrypoints/newtab/App.tsx` | New tab app (update) |
-| `src/entrypoints/newtab/NewTabContent.tsx` | Extracted content component |
-| `src/hooks/useItems.ts` | Items hook (update with toast) |
-| `src/styles/globals.css` | Global styles (update) |
+| `src/entrypoints/background.ts` | Add capture complete notification (update) |
+| `src/entrypoints/newtab/App.tsx` | Add live refresh listener (update) |
+| `src/contexts/ViewContext.tsx` | View context (update with default view) |
+| `src/styles/globals.css` | Global styles (update for dark mode) |
 
 ---
 
@@ -668,10 +450,7 @@ a {
 - [ ] Default view select works and persists
 - [ ] Default view is used when opening new tab
 - [ ] Troubleshooting section displays correctly
-- [ ] Hiding an item shows "Hidden. Undo" toast
-- [ ] Undo button restores the item
-- [ ] Toast auto-dismisses after 5 seconds
-- [ ] Toast can be manually dismissed
+- [ ] **Live refresh**: New tab page auto-refreshes when capture completes
 - [ ] Dark mode works on options page
 - [ ] All styles are consistent in dark mode
 
@@ -686,12 +465,11 @@ a {
    - Toggle auto-close → save tabs → verify behavior
    - Change default view → open new tab → verify correct view
 
-2. **Undo Toast**
-   - Hide an item
-   - Toast appears for 5 seconds
-   - Click Undo → item returns
-   - Click X → toast dismisses
-   - Let toast timeout → auto-dismisses
+2. **Live Refresh**
+   - Open new tab page (bmbl)
+   - Open some other tabs with URLs
+   - Click bmbl icon to capture
+   - Verify new tab page automatically shows the new items (no manual refresh needed)
 
 3. **Dark Mode**
    - Toggle system dark mode
@@ -710,6 +488,7 @@ a {
 After this phase, verify the complete V1 feature set:
 
 - [ ] **Capture**: Click icon → all tabs saved
+- [ ] **Live Refresh**: New tab page auto-updates when capture completes
 - [ ] **Dedupe**: Same URL → single item with updated saveCount (Phase 6: tabs aggregated by URL)
 - [ ] **Views**: new, old, favorites, frequent, hidden all work
 - [ ] **Favorites**: HN-style triangle arrow to favorite, "unfavorite" link to remove (Phase 7)
@@ -719,16 +498,13 @@ After this phase, verify the complete V1 feature set:
 - [ ] **Settings**: Auto-close and default view work
 - [ ] **Icon States**: Default → Loading → Success → Default
 - [ ] **Dark Mode**: System preference respected
-- [ ] **Undo Toast**: Hide shows undo option
 
 ---
 
 ## Notes
 
-- Toast system is minimal but extensible
 - Settings sync across Chrome instances via chrome.storage.sync
 - Default view loads from settings before rendering items
-- Undo captures item state for immediate restoration
 
 ---
 
