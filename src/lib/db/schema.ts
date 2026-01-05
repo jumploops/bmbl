@@ -100,6 +100,41 @@ export class BmblDatabase extends Dexie {
             delete item.score;
           });
       });
+
+    // Version 5: Add compound indexes for efficient queries, convert nulls to sentinel values
+    // This fixes the performance issue where listItems loaded all items into memory.
+    // Dexie cannot efficiently query "WHERE field = null" since nulls are excluded from indexes.
+    // Using 0 as a sentinel value allows indexed queries like "WHERE deletedAt = 0".
+    this.version(5)
+      .stores({
+        // Compound indexes: [deletedAt+X] enables "WHERE deletedAt=0 ORDER BY X"
+        // - [deletedAt+lastSavedAt]: for 'new' and 'old' views
+        // - [deletedAt+favoritedAt]: for 'favorites' view
+        // - [deletedAt+saveCount]: for 'frequent' view
+        // - deletedAt alone: for 'hidden' view (WHERE deletedAt > 0)
+        items: 'itemId, &normalizedUrl, [deletedAt+lastSavedAt], [deletedAt+favoritedAt], [deletedAt+saveCount], deletedAt, updatedAt',
+        captures: 'captureId, createdAt',
+        captureEvents: '[captureId+itemId], captureId, itemId, capturedAt, groupTitle',
+      })
+      .upgrade((tx) => {
+        return tx
+          .table('items')
+          .toCollection()
+          .modify((item: Record<string, unknown>) => {
+            // Convert null to 0 for deletedAt (0 = not deleted)
+            if (item.deletedAt === null || item.deletedAt === undefined) {
+              item.deletedAt = 0;
+            }
+            // Convert null to 0 for favoritedAt (0 = not favorited)
+            if (item.favoritedAt === null || item.favoritedAt === undefined) {
+              item.favoritedAt = 0;
+            }
+            // Also convert lastOpenedAt for consistency
+            if (item.lastOpenedAt === null || item.lastOpenedAt === undefined) {
+              item.lastOpenedAt = 0;
+            }
+          });
+      });
   }
 }
 

@@ -1,6 +1,7 @@
 import { Globe } from 'lucide-react';
 import { formatRelativeTime, formatAbsoluteTime } from '@/lib/utils/time';
 import type { Item, ViewType } from '@/types';
+import { NOT_FAVORITED } from '@/types';
 
 function VoteArrow({ onClick }: { onClick: () => void }) {
   return (
@@ -49,7 +50,7 @@ export function ItemRow({
 
       {/* Vote arrow - visible only when not favorited, space preserved */}
       <div className="w-[14px] shrink-0 flex justify-center pt-1">
-        {!item.favoritedAt && !isHiddenView && (
+        {item.favoritedAt === NOT_FAVORITED && !isHiddenView && (
           <VoteArrow onClick={onFavorite} />
         )}
       </div>
@@ -115,7 +116,7 @@ export function ItemRow({
               >
                 hide
               </button>
-              {item.favoritedAt && (
+              {item.favoritedAt !== NOT_FAVORITED && (
                 <>
                   <span>|</span>
                   <button onClick={onUnfavorite} className="hover:underline cursor-pointer">

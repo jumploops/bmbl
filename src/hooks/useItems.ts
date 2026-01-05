@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { listItemsV2, setFavorite, unsetFavorite, softDelete, restore } from '@/lib/db/items';
+import { listItems, setFavorite, unsetFavorite, softDelete, restore } from '@/lib/db/items';
 import type { Item, ViewType } from '@/types';
+import { NOT_FAVORITED } from '@/types';
 
 const PAGE_SIZE = 30;
 
@@ -32,7 +33,7 @@ export function useItems(view: ViewType): UseItemsReturn {
     setIsLoading(true);
     setError(null);
 
-    listItemsV2({ view, limit: PAGE_SIZE, offset: 0 })
+    listItems({ view, limit: PAGE_SIZE, offset: 0 })
       .then((loadedItems) => {
         setItems(loadedItems);
         setHasMore(loadedItems.length === PAGE_SIZE);
@@ -51,7 +52,7 @@ export function useItems(view: ViewType): UseItemsReturn {
 
     setIsLoading(true);
     try {
-      const moreItems = await listItemsV2({ view, limit: PAGE_SIZE, offset });
+      const moreItems = await listItems({ view, limit: PAGE_SIZE, offset });
       setItems((prev) => [...prev, ...moreItems]);
       setHasMore(moreItems.length === PAGE_SIZE);
       setOffset((prev) => prev + PAGE_SIZE);
@@ -70,7 +71,7 @@ export function useItems(view: ViewType): UseItemsReturn {
     setError(null);
 
     try {
-      const loadedItems = await listItemsV2({ view, limit: PAGE_SIZE, offset: 0 });
+      const loadedItems = await listItems({ view, limit: PAGE_SIZE, offset: 0 });
       setItems(loadedItems);
       setHasMore(loadedItems.length === PAGE_SIZE);
       setOffset(PAGE_SIZE);
@@ -96,7 +97,7 @@ export function useItems(view: ViewType): UseItemsReturn {
       // Revert on error
       setItems((prev) =>
         prev.map((item) =>
-          item.itemId === itemId ? { ...item, favoritedAt: null } : item
+          item.itemId === itemId ? { ...item, favoritedAt: NOT_FAVORITED } : item
         )
       );
     }
@@ -109,7 +110,7 @@ export function useItems(view: ViewType): UseItemsReturn {
     // Optimistic update
     setItems((prev) =>
       prev.map((item) =>
-        item.itemId === itemId ? { ...item, favoritedAt: null } : item
+        item.itemId === itemId ? { ...item, favoritedAt: NOT_FAVORITED } : item
       )
     );
 
@@ -119,7 +120,7 @@ export function useItems(view: ViewType): UseItemsReturn {
       // Revert on error
       setItems((prev) =>
         prev.map((item) =>
-          item.itemId === itemId ? { ...item, favoritedAt: originalFavoritedAt ?? null } : item
+          item.itemId === itemId ? { ...item, favoritedAt: originalFavoritedAt ?? NOT_FAVORITED } : item
         )
       );
     }

@@ -1,5 +1,7 @@
+import Dexie from 'dexie';
 import { db } from './schema';
 import type { Item, ListOptions } from '@/types';
+import { NOT_DELETED, NOT_FAVORITED, NOT_OPENED } from '@/types';
 import { normalizeUrl, extractDomain, generateTitleFallback } from '@/lib/utils/url';
 import { generateId } from '@/lib/utils/uuid';
 
@@ -26,10 +28,10 @@ export function createItemFromTab(
     favIconUrl,
     createdAt: now,
     lastSavedAt: now,
-    saveCount: tabCount, // Start with tabCount, not always 1
-    favoritedAt: null, // Not favorited by default
-    deletedAt: null,
-    lastOpenedAt: null,
+    saveCount: tabCount,
+    favoritedAt: NOT_FAVORITED,
+    deletedAt: NOT_DELETED,
+    lastOpenedAt: NOT_OPENED,
     updatedAt: now,
   };
 }
@@ -65,7 +67,7 @@ export async function upsertItem(
 
   // Update existing item
   const now = Date.now();
-  const wasDeleted = existing.deletedAt !== null;
+  const wasDeleted = existing.deletedAt !== NOT_DELETED;
   const displayTitle = title || generateTitleFallback(url);
 
   const updates: Partial<Item> = {
@@ -73,7 +75,7 @@ export async function upsertItem(
     title: displayTitle,
     favIconUrl,
     lastSavedAt: now,
-    saveCount: existing.saveCount + tabCount, // Increment by tabCount, not always 1
+    saveCount: existing.saveCount + tabCount,
     updatedAt: now,
     // Keep deletedAt as-is (don't resurrect)
     // Keep favoritedAt as-is
@@ -86,59 +88,110 @@ export async function upsertItem(
 }
 
 /**
- * Get items for a view with pagination
+ * List items for a view with efficient indexed queries.
+ * Uses compound indexes to avoid loading all items into memory.
  */
-export async function listItemsV2(options: ListOptions): Promise<Item[]> {
+export async function listItems(options: ListOptions): Promise<Item[]> {
   const { view, limit, offset } = options;
 
-  // Get all items first (Dexie limitation with complex sorting)
-  let items = await db.items.toArray();
-
-  // Filter based on view
   switch (view) {
     case 'new':
+      return listByLastSaved(limit, offset, 'desc');
     case 'old':
-    case 'frequent':
-      items = items.filter(item => item.deletedAt === null);
-      break;
+      return listByLastSaved(limit, offset, 'asc');
     case 'favorites':
-      items = items.filter(item => item.deletedAt === null && item.favoritedAt !== null);
-      break;
+      return listFavorites(limit, offset);
+    case 'frequent':
+      return listFrequent(limit, offset);
     case 'hidden':
-      items = items.filter(item => item.deletedAt !== null);
-      break;
+      return listHidden(limit, offset);
+  }
+}
+
+/**
+ * List non-deleted items sorted by lastSavedAt.
+ * Uses compound index [deletedAt+lastSavedAt] for efficient query.
+ */
+async function listByLastSaved(
+  limit: number,
+  offset: number,
+  direction: 'asc' | 'desc'
+): Promise<Item[]> {
+  let query = db.items
+    .where('[deletedAt+lastSavedAt]')
+    .between(
+      [NOT_DELETED, Dexie.minKey],
+      [NOT_DELETED, Dexie.maxKey]
+    );
+
+  if (direction === 'desc') {
+    query = query.reverse();
   }
 
-  // Sort based on view
-  switch (view) {
-    case 'new':
-      items.sort((a, b) => b.lastSavedAt - a.lastSavedAt);
-      break;
-    case 'old':
-      items.sort((a, b) => a.lastSavedAt - b.lastSavedAt);
-      break;
-    case 'favorites':
-      // Sort by when favorited, most recent first
-      items.sort((a, b) => {
-        const aFav = a.favoritedAt || 0;
-        const bFav = b.favoritedAt || 0;
-        if (bFav !== aFav) return bFav - aFav;
-        return b.lastSavedAt - a.lastSavedAt;
-      });
-      break;
-    case 'frequent':
-      items.sort((a, b) => {
-        if (b.saveCount !== a.saveCount) return b.saveCount - a.saveCount;
-        return b.lastSavedAt - a.lastSavedAt;
-      });
-      break;
-    case 'hidden':
-      items.sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
-      break;
-  }
+  return query.offset(offset).limit(limit).toArray();
+}
 
-  // Paginate
-  return items.slice(offset, offset + limit);
+/**
+ * List favorited items sorted by favoritedAt (most recent first).
+ * Uses compound index [deletedAt+favoritedAt].
+ * Secondary sort by lastSavedAt done in-memory (negligible for page size).
+ */
+async function listFavorites(limit: number, offset: number): Promise<Item[]> {
+  // Get favorited items (favoritedAt > 0) that are not deleted
+  const items = await db.items
+    .where('[deletedAt+favoritedAt]')
+    .between(
+      [NOT_DELETED, 1],  // favoritedAt > 0 (excludes NOT_FAVORITED)
+      [NOT_DELETED, Dexie.maxKey]
+    )
+    .reverse()
+    .offset(offset)
+    .limit(limit)
+    .toArray();
+
+  // Secondary sort by lastSavedAt for items with same favoritedAt timestamp
+  return items.sort((a, b) => {
+    if (b.favoritedAt !== a.favoritedAt) return b.favoritedAt - a.favoritedAt;
+    return b.lastSavedAt - a.lastSavedAt;
+  });
+}
+
+/**
+ * List non-deleted items sorted by saveCount (most saved first).
+ * Uses compound index [deletedAt+saveCount].
+ * Secondary sort by lastSavedAt done in-memory (negligible for page size).
+ */
+async function listFrequent(limit: number, offset: number): Promise<Item[]> {
+  const items = await db.items
+    .where('[deletedAt+saveCount]')
+    .between(
+      [NOT_DELETED, Dexie.minKey],
+      [NOT_DELETED, Dexie.maxKey]
+    )
+    .reverse()
+    .offset(offset)
+    .limit(limit)
+    .toArray();
+
+  // Secondary sort by lastSavedAt for items with same saveCount
+  return items.sort((a, b) => {
+    if (b.saveCount !== a.saveCount) return b.saveCount - a.saveCount;
+    return b.lastSavedAt - a.lastSavedAt;
+  });
+}
+
+/**
+ * List deleted items sorted by deletedAt (most recent first).
+ * Uses simple deletedAt index since we're filtering for deletedAt > 0.
+ */
+async function listHidden(limit: number, offset: number): Promise<Item[]> {
+  return db.items
+    .where('deletedAt')
+    .above(NOT_DELETED)
+    .reverse()
+    .offset(offset)
+    .limit(limit)
+    .toArray();
 }
 
 /**
@@ -163,7 +216,7 @@ export async function setFavorite(itemId: string): Promise<void> {
  */
 export async function unsetFavorite(itemId: string): Promise<void> {
   await db.items.update(itemId, {
-    favoritedAt: null,
+    favoritedAt: NOT_FAVORITED,
     updatedAt: Date.now(),
   });
 }
@@ -183,18 +236,25 @@ export async function softDelete(itemId: string): Promise<void> {
  */
 export async function restore(itemId: string): Promise<void> {
   await db.items.update(itemId, {
-    deletedAt: null,
+    deletedAt: NOT_DELETED,
     updatedAt: Date.now(),
   });
 }
 
 /**
- * Get total count of items (for stats)
+ * Get count of active (non-deleted) items.
+ * Uses indexed query for efficiency.
  */
-export async function getItemCount(includeDeleted = false): Promise<number> {
-  if (includeDeleted) {
-    return db.items.count();
-  }
-  const items = await db.items.toArray();
-  return items.filter(item => item.deletedAt === null).length;
+export async function getActiveItemCount(): Promise<number> {
+  return db.items
+    .where('[deletedAt+lastSavedAt]')
+    .between([NOT_DELETED, Dexie.minKey], [NOT_DELETED, Dexie.maxKey])
+    .count();
+}
+
+/**
+ * Get total count of all items (including deleted).
+ */
+export async function getTotalItemCount(): Promise<number> {
+  return db.items.count();
 }

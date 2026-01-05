@@ -2,6 +2,15 @@
 // Database Entities
 // ============================================
 
+/**
+ * Sentinel values for nullable timestamp fields.
+ * Using 0 instead of null enables efficient indexed queries in Dexie/IndexedDB,
+ * since null values are excluded from indexes.
+ */
+export const NOT_DELETED = 0;
+export const NOT_FAVORITED = 0;
+export const NOT_OPENED = 0;
+
 export interface Item {
   itemId: string;
   url: string;
@@ -12,9 +21,9 @@ export interface Item {
   createdAt: number;
   lastSavedAt: number;
   saveCount: number;
-  favoritedAt: number | null; // Timestamp when favorited, null if not
-  deletedAt: number | null;
-  lastOpenedAt: number | null;
+  favoritedAt: number;   // Timestamp when favorited, 0 if not favorited
+  deletedAt: number;     // Timestamp when deleted, 0 if not deleted
+  lastOpenedAt: number;  // Timestamp when last opened, 0 if never opened
   updatedAt: number;
 }
 
