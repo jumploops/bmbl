@@ -16,11 +16,12 @@ The bmbl codebase is well-structured for a Chrome extension prototype. The code 
 | Security | 0 | 0 | 2 | 2 |
 | Performance | 0 | ~~2~~ 0 ✅ | 2 | 1 |
 | Abstractions | 0 | 0 | 2 | 3 |
-| Robustness | 0 | 1 | 3 | 2 |
+| Robustness | 0 | ~~1~~ 0 ✅ | 3 | 2 |
 
 ### Resolved Issues
 - ✅ **Performance H1**: `listItems` now uses compound indexes (was `listItemsV2`)
 - ✅ **Performance H2**: `getActiveItemCount` uses indexed queries (replaced `getItemCount`)
+- ✅ **Robustness H1**: Fixed stale closure in `useItems.unfavorite`
 
 ---
 
@@ -283,32 +284,28 @@ export async function captureAllTabs(): Promise<CaptureResult> {
 
 ### 4.2 High Priority Issues
 
-**H1: Stale Closure in `unfavorite`** (`src/hooks/useItems.ts:105-126`)
+**✅ RESOLVED: H1 - Stale Closure in `unfavorite`**
 
+*Fixed 2026-01-05.*
+
+The original issue was that `unfavorite` depended on `items` in its dependency array, causing stale data and unnecessary re-renders.
+
+**Solution implemented**: Capture the original value inside the `setItems` callback, which always has access to current state:
 ```ts
 const unfavorite = useCallback(async (itemId: string) => {
-  // Store original value for revert
-  const originalFavoritedAt = items.find(i => i.itemId === itemId)?.favoritedAt;
-  // ...
-}, [items]);  // <-- items in dependency array
-```
+  let originalFavoritedAt: number = NOT_FAVORITED;
 
-This callback depends on `items`, but `items` changes frequently. This can cause:
-- Stale data if items update between click and execution
-- Unnecessary re-renders of components using this callback
-
-**Recommendation**: Access current state via callback form:
-```ts
-const unfavorite = useCallback(async (itemId: string) => {
-  let originalFavoritedAt: number | null = null;
   setItems((prev) => {
-    originalFavoritedAt = prev.find(i => i.itemId === itemId)?.favoritedAt ?? null;
+    const item = prev.find((i) => i.itemId === itemId);
+    if (item) {
+      originalFavoritedAt = item.favoritedAt;
+    }
     return prev.map((item) =>
-      item.itemId === itemId ? { ...item, favoritedAt: null } : item
+      item.itemId === itemId ? { ...item, favoritedAt: NOT_FAVORITED } : item
     );
   });
-  // ... rest of logic
-}, []);
+  // ... rest uses originalFavoritedAt for revert
+}, []);  // No dependencies needed
 ```
 
 ### 4.3 Medium Priority Issues
@@ -369,8 +366,8 @@ The `!` assertion could cause silent failures if root element is missing.
 ### Immediate (Before Public Release)
 
 1. ~~**Refactor `listItemsV2`** to use indexed queries instead of loading all items~~ ✅ Done
-2. **Fix stale closure** in `useItems.unfavorite` ⬅️ **Next priority**
-3. **Replace `setTimeout`** with `chrome.alarms` for icon state in service worker
+2. ~~**Fix stale closure** in `useItems.unfavorite`~~ ✅ Done
+3. **Replace `setTimeout`** with `chrome.alarms` for icon state in service worker ⬅️ **Next priority**
 4. **Remove or conditionally disable** console.log statements
 
 ### Short-term
@@ -423,7 +420,7 @@ Current tests: `src/lib/utils/url.test.ts` only (96 lines)
 | File | Primary Concern | Priority | Status |
 |------|-----------------|----------|--------|
 | `src/lib/db/items.ts` | ~~Performance (H1, H2)~~ | ~~High~~ | ✅ Fixed |
-| `src/hooks/useItems.ts` | Robustness (H1) | High | Open |
+| `src/hooks/useItems.ts` | ~~Robustness (H1)~~ | ~~High~~ | ✅ Fixed |
 | `src/lib/capture/icons.ts` | Performance (M2) | Medium | Open |
 | `src/components/ItemRow.tsx` | Security (M1) | Medium | Open |
 | `src/entrypoints/background.ts` | Security (M2) | Medium | Open |

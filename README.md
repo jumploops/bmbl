@@ -9,11 +9,11 @@ bmbl is a Chrome extension that captures all open tabs across all windows and di
 - **One-click capture**: Save all open tabs across all windows instantly
 - **HN-style interface**: Clean, information-dense list view
 - **Smart deduplication**: Same URL saved multiple times? It's tracked, not duplicated
-- **Priority scoring**: Upvote/downvote to prioritize your reading
-- **Multiple views**: Sort by newest, oldest, priority, or frequency
+- **Favorites**: Star items to add them to your favorites
+- **Multiple views**: Sort by newest, oldest, favorites, or frequency
 - **Soft delete**: Hide items you don't need; restore them anytime
 - **Tab group support**: Captures Chrome tab group metadata
-- **Dark mode**: Follows system preference
+- **Dark mode**: System, light, or dark theme options
 - **Local-first**: All data stays in your browser (IndexedDB)
 
 ## Tech Stack
@@ -121,19 +121,19 @@ pnpm typecheck
 3. Verify only one item in list (saveCount should reflect multiple captures)
 
 #### Soft Delete
-1. Hide an item using the trash icon
+1. Hide an item using the "hide" link
 2. Switch to "hidden" view → item should appear there
-3. Click restore → item returns to main views
+3. Click "restore" → item returns to main views
 
-#### Scoring
-1. Upvote an item → score increases immediately
-2. Downvote → score decreases (minimum 0)
-3. Refresh page → changes persist
+#### Favorites
+1. Click the arrow to favorite an item
+2. Switch to "favorites" view → item should appear there
+3. Click "unfavorite" → item is removed from favorites
 
 #### Views
 - **new**: Items sorted by most recently saved
 - **old**: Items sorted oldest first
-- **priority**: Items with score > 0, sorted by score
+- **favorites**: Favorited items, sorted by when favorited
 - **frequent**: Items sorted by save count
 - **hidden**: Soft-deleted items
 
@@ -227,18 +227,15 @@ bmbl/
 │   └── styles/
 │       └── globals.css             # Tailwind + theme
 ├── public/
-│   └── icon/                       # Extension icons
+│   └── icon/                       # Extension icons (16, 32, 48, 128px)
 ├── spec/
 │   └── init.md                     # Product specification
 ├── plan/
-│   ├── README.md                   # Implementation plan overview
-│   ├── phase-1-project-setup.md
-│   ├── phase-2-data-layer.md
-│   ├── phase-3-capture-pipeline.md
-│   ├── phase-4-newtab-ui.md
-│   └── phase-5-polish-settings.md
-├── scripts/
-│   └── generate-icons.mjs          # Placeholder icon generator
+│   └── *.md                        # Implementation plans
+├── review/
+│   └── *.md                        # Code review documents
+├── debug/
+│   └── *.md                        # Debug investigation notes
 ├── wxt.config.ts                   # WXT configuration
 ├── tsconfig.json
 ├── postcss.config.js
@@ -315,10 +312,6 @@ Make sure you've loaded the correct output folder (`.output/chrome-mv3`), not th
 ### New tab page shows different extension
 
 Another extension may be overriding the new tab. Disable other new tab extensions or check the troubleshooting section in bmbl's settings.
-
-### Icons not showing
-
-Run `node scripts/generate-icons.mjs` to regenerate placeholder icons.
 
 ---
 

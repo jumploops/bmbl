@@ -104,27 +104,43 @@ export function useItems(view: ViewType): UseItemsReturn {
   }, []);
 
   const unfavorite = useCallback(async (itemId: string) => {
-    // Store original value for revert
-    const originalFavoritedAt = items.find(i => i.itemId === itemId)?.favoritedAt;
+    // Capture original item inside setItems to avoid stale closure
+    let originalItem: Item | undefined;
 
     // Optimistic update
-    setItems((prev) =>
-      prev.map((item) =>
+    setItems((prev) => {
+      originalItem = prev.find((i) => i.itemId === itemId);
+
+      // In favorites view, remove the item entirely (it no longer belongs)
+      if (view === 'favorites') {
+        return prev.filter((item) => item.itemId !== itemId);
+      }
+
+      // In other views, just update the favoritedAt value
+      return prev.map((item) =>
         item.itemId === itemId ? { ...item, favoritedAt: NOT_FAVORITED } : item
-      )
-    );
+      );
+    });
 
     try {
       await unsetFavorite(itemId);
     } catch {
       // Revert on error
-      setItems((prev) =>
-        prev.map((item) =>
-          item.itemId === itemId ? { ...item, favoritedAt: originalFavoritedAt ?? NOT_FAVORITED } : item
-        )
-      );
+      setItems((prev) => {
+        // In favorites view, re-add the item
+        if (view === 'favorites' && originalItem) {
+          return [...prev, originalItem].sort((a, b) => b.favoritedAt - a.favoritedAt);
+        }
+
+        // In other views, restore the favoritedAt value
+        return prev.map((item) =>
+          item.itemId === itemId
+            ? { ...item, favoritedAt: originalItem?.favoritedAt ?? NOT_FAVORITED }
+            : item
+        );
+      });
     }
-  }, [items]);
+  }, [view]);
 
   const hide = useCallback(async (itemId: string) => {
     // Optimistic update - remove from list
