@@ -23,7 +23,8 @@
   --radius: 0.25rem;
 
   /* HN-style colors */
-  --hn-bg: hsl(60 9% 94%);
+  --hn-bg: #eaeaea;
+  --hn-content-bg: #eaeaea;
   --hn-header: hsl(263 70% 58%);
   --hn-header-dark: hsl(263 75% 37%);
   --hn-text: hsl(0 0% 0%);
@@ -51,6 +52,7 @@
 
   /* HN-style colors - dark mode */
   --hn-bg: hsl(0 0% 10%);
+  --hn-content-bg: hsl(0 0% 15%);
   --hn-header: hsl(263 70% 45%);
   --hn-header-dark: hsl(263 75% 37%);
   --hn-text: hsl(60 9% 94%);
@@ -81,6 +83,7 @@
 
   /* HN-style theme variables */
   --color-hn-bg: var(--hn-bg);
+  --color-hn-content-bg: var(--hn-content-bg);
   --color-hn-header: var(--hn-header);
   --color-hn-header-dark: var(--hn-header-dark);
   --color-hn-text: var(--hn-text);

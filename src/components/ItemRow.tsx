@@ -1,4 +1,4 @@
-import { Globe, Trash2, RotateCcw } from 'lucide-react';
+import { Globe } from 'lucide-react';
 import { formatRelativeTime, formatAbsoluteTime } from '@/lib/utils/time';
 import type { Item, ViewType } from '@/types';
 
@@ -91,36 +91,38 @@ export function ItemRow({
         </div>
 
         {/* Line 2: Metadata + Actions */}
-        <div className="text-[8pt] text-hn-text-secondary flex items-center gap-2 mt-0.5">
-          <span>{item.saveCount} point{item.saveCount !== 1 ? 's' : ''}</span>
+        <div className="text-[8pt] text-hn-text-secondary flex items-center gap-1 mt-0.5">
+          <span>{item.saveCount} save{item.saveCount !== 1 ? 's' : ''}</span>
 
           <span title={formatAbsoluteTime(item.lastSavedAt)}>
-            saved {formatRelativeTime(item.lastSavedAt)}
+            {formatRelativeTime(item.lastSavedAt)}
           </span>
 
           {/* Actions */}
+          <span>|</span>
           {isHiddenView ? (
             <button
               onClick={onRestore}
-              className="hover:underline cursor-pointer flex items-center gap-0.5"
+              className="hover:underline cursor-pointer"
             >
-              <RotateCcw size={10} />
               restore
             </button>
           ) : (
             <>
-              {item.favoritedAt && (
-                <button onClick={onUnfavorite} className="hover:underline cursor-pointer">
-                  unfavorite
-                </button>
-              )}
               <button
                 onClick={onHide}
-                className="hover:underline cursor-pointer flex items-center gap-0.5"
+                className="hover:underline cursor-pointer"
               >
-                <Trash2 size={10} />
                 hide
               </button>
+              {item.favoritedAt && (
+                <>
+                  <span>|</span>
+                  <button onClick={onUnfavorite} className="hover:underline cursor-pointer">
+                    unfavorite
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>

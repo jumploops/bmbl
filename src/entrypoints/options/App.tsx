@@ -135,7 +135,7 @@ export default function App() {
 
           <div className="text-sm text-hn-text-secondary">
             <p className="mb-2">
-              <strong>Bookmark Backlog (bmbl)</strong> v0.1.0
+              <strong>Bookmark Backlog (bmbl)</strong> v0.0.1
             </p>
             <p>
               Save all your tabs with one click. Triage your reading backlog

@@ -80,7 +80,7 @@ export default function App() {
   return (
     <ViewProvider>
       <div className="min-h-screen bg-hn-bg text-hn-text dark:bg-hn-bg dark:text-hn-text font-[family-name:var(--font-hn)] text-[10pt]">
-        <div className="w-full lg:w-[85%] mx-auto">
+        <div className="w-full lg:w-[85%] mx-auto bg-hn-content-bg pt-2">
           <Header />
           <NewTabContent />
         </div>

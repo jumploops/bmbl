@@ -7,7 +7,7 @@ export default defineConfig({
     name: 'Bookmark Backlog',
     short_name: 'bmbl',
     description: 'Save all tabs with one click. Triage your reading backlog.',
-    version: '0.1.0',
+    version: '0.0.1',
     permissions: [
       'tabs',
       'tabGroups',
