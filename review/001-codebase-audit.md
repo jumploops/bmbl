@@ -14,13 +14,14 @@ The bmbl codebase is well-structured for a Chrome extension prototype. The code 
 | Category | Critical | High | Medium | Low |
 |----------|----------|------|--------|-----|
 | Security | 0 | 0 | 2 | 2 |
-| Performance | 0 | ~~2~~ 0 ✅ | 2 | 1 |
+| Performance | 0 | ~~2~~ 0 ✅ | ~~2~~ 1 ✅ | 1 |
 | Abstractions | 0 | 0 | 2 | 3 |
 | Robustness | 0 | ~~1~~ 0 ✅ | 3 | 2 |
 
 ### Resolved Issues
 - ✅ **Performance H1**: `listItems` now uses compound indexes (was `listItemsV2`)
 - ✅ **Performance H2**: `getActiveItemCount` uses indexed queries (replaced `getItemCount`)
+- ✅ **Performance M2**: Icon timeout now uses hybrid setTimeout + chrome.alarms approach
 - ✅ **Robustness H1**: Fixed stale closure in `useItems.unfavorite`
 
 ---
@@ -157,20 +158,30 @@ Each creates separate `chrome.storage.sync.get` calls.
 
 **Recommendation**: Create a `SettingsProvider` context that loads once and shares.
 
-**M2: Service Worker Icon Timeout** (`src/lib/capture/icons.ts:41-46`)
+**✅ RESOLVED: M2 - Service Worker Icon Timeout**
+
+*Fixed 2026-01-05. See `plan/009-icon-timeout-alarms.md` for details.*
+
+The original issue was that `setTimeout` doesn't survive service worker termination in MV3, causing the icon to stay in "success" state indefinitely.
+
+**Solution implemented**: Hybrid approach using both mechanisms:
+1. `setTimeout` (5 sec) for fast reset when service worker stays alive (common case)
+2. `chrome.alarms` (30 sec) as safety net if service worker is terminated
 
 ```ts
-if (state === 'success') {
-  successTimeout = setTimeout(() => {
-    chrome.action.setIcon({ path: ICON_PATHS.default });
-    successTimeout = null;
-  }, 5000);
-}
+// Fast path: setTimeout
+successTimeout = setTimeout(async () => {
+  await chrome.alarms.clear(ICON_RESET_ALARM);
+  await chrome.action.setIcon({ path: ICON_PATHS.default });
+}, SUCCESS_DISPLAY_MS);
+
+// Safety net: alarm
+await chrome.alarms.create(ICON_RESET_ALARM, {
+  delayInMinutes: ALARM_DELAY_MINUTES, // 0.5 min (Chrome minimum)
+});
 ```
 
-In Manifest V3, service workers can be terminated while this timeout is pending, causing the icon to stay in "success" state indefinitely.
-
-**Recommendation**: Use `chrome.alarms` API instead of `setTimeout` for reliable timing in service workers.
+Added `alarms` permission to manifest.
 
 ### 2.4 Low Priority Issues
 
@@ -367,8 +378,8 @@ The `!` assertion could cause silent failures if root element is missing.
 
 1. ~~**Refactor `listItemsV2`** to use indexed queries instead of loading all items~~ ✅ Done
 2. ~~**Fix stale closure** in `useItems.unfavorite`~~ ✅ Done
-3. **Replace `setTimeout`** with `chrome.alarms` for icon state in service worker ⬅️ **Next priority**
-4. **Remove or conditionally disable** console.log statements
+3. ~~**Replace `setTimeout`** with `chrome.alarms` for icon state in service worker~~ ✅ Done
+4. **Remove or conditionally disable** console.log statements ⬅️ **Next priority**
 
 ### Short-term
 
@@ -421,7 +432,7 @@ Current tests: `src/lib/utils/url.test.ts` only (96 lines)
 |------|-----------------|----------|--------|
 | `src/lib/db/items.ts` | ~~Performance (H1, H2)~~ | ~~High~~ | ✅ Fixed |
 | `src/hooks/useItems.ts` | ~~Robustness (H1)~~ | ~~High~~ | ✅ Fixed |
-| `src/lib/capture/icons.ts` | Performance (M2) | Medium | Open |
+| `src/lib/capture/icons.ts` | ~~Performance (M2)~~ | ~~Medium~~ | ✅ Fixed |
 | `src/components/ItemRow.tsx` | Security (M1) | Medium | Open |
 | `src/entrypoints/background.ts` | Security (M2) | Medium | Open |
 | `src/contexts/ViewContext.tsx` | Abstractions (M2) | Medium | Open |

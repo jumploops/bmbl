@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils/cn';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'destructive';
   size?: 'sm' | 'md';
 }
 
@@ -31,6 +31,11 @@ export function Button({
           'bg-gray-100 dark:bg-gray-700 text-hn-text',
           'border border-gray-300 dark:border-gray-600',
           'hover:bg-gray-200 dark:hover:bg-gray-600',
+          'disabled:opacity-50 disabled:cursor-not-allowed',
+        ],
+        variant === 'destructive' && [
+          'bg-destructive text-destructive-foreground',
+          'hover:bg-red-700 dark:hover:bg-red-600',
           'disabled:opacity-50 disabled:cursor-not-allowed',
         ],
         className

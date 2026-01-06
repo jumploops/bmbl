@@ -1,5 +1,9 @@
 type IconState = 'default' | 'loading' | 'success';
 
+export const ICON_RESET_ALARM = 'icon-reset';
+const SUCCESS_DISPLAY_MS = 5000;
+const ALARM_DELAY_MINUTES = 0.5; // 30 seconds (Chrome minimum for packed extensions)
+
 const ICON_PATHS: Record<IconState, Record<number, string>> = {
   default: {
     16: 'icon/16.png',
@@ -24,26 +28,53 @@ const ICON_PATHS: Record<IconState, Record<number, string>> = {
 let successTimeout: ReturnType<typeof setTimeout> | null = null;
 
 /**
- * Set the extension icon state
+ * Clear any pending icon reset mechanisms (both setTimeout and alarm)
  */
-export async function setIconState(state: IconState): Promise<void> {
-  // Clear any pending success timeout
+async function clearPendingReset(): Promise<void> {
   if (successTimeout) {
     clearTimeout(successTimeout);
     successTimeout = null;
   }
+  await chrome.alarms.clear(ICON_RESET_ALARM);
+}
+
+/**
+ * Set the extension icon state.
+ * For 'success' state, schedules automatic reset to 'default' using:
+ * - setTimeout (5 sec) for fast reset when service worker stays alive
+ * - chrome.alarms (30 sec) as safety net if service worker terminates
+ */
+export async function setIconState(state: IconState): Promise<void> {
+  await clearPendingReset();
 
   await chrome.action.setIcon({
     path: ICON_PATHS[state],
   });
 
-  // If success, revert to default after 5 seconds
   if (state === 'success') {
-    successTimeout = setTimeout(() => {
-      chrome.action.setIcon({ path: ICON_PATHS.default });
+    // Fast path: setTimeout (works if service worker stays alive)
+    successTimeout = setTimeout(async () => {
+      await chrome.alarms.clear(ICON_RESET_ALARM);
+      await chrome.action.setIcon({ path: ICON_PATHS.default });
       successTimeout = null;
-    }, 5000);
+    }, SUCCESS_DISPLAY_MS);
+
+    // Safety net: alarm (fires if service worker was terminated)
+    await chrome.alarms.create(ICON_RESET_ALARM, {
+      delayInMinutes: ALARM_DELAY_MINUTES,
+    });
   }
+}
+
+/**
+ * Handle icon reset alarm firing (called from background.ts alarm listener)
+ */
+export async function handleIconResetAlarm(): Promise<void> {
+  if (successTimeout) {
+    clearTimeout(successTimeout);
+    successTimeout = null;
+  }
+  await chrome.action.setIcon({ path: ICON_PATHS.default });
 }
 
 /**

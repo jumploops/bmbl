@@ -13,6 +13,7 @@ export default defineConfig({
       'tabGroups',
       'storage',
       'unlimitedStorage',
+      'alarms',
     ],
     action: {
       default_title: 'Save all tabs',

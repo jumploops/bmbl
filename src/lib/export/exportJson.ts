@@ -26,6 +26,7 @@ export async function exportToJson(options: ExportOptions): Promise<BmblExport> 
     url: item.url,
     title: item.title,
     domain: item.domain,
+    favIconUrl: item.favIconUrl,
     createdAt: item.createdAt,
     lastSavedAt: item.lastSavedAt,
     saveCount: item.saveCount,

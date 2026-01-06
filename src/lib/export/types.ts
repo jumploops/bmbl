@@ -10,6 +10,7 @@ export interface ExportedItem {
   url: string;
   title: string;
   domain?: string;
+  favIconUrl?: string | null;
   createdAt?: number;
   lastSavedAt?: number;
   saveCount?: number;

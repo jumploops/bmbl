@@ -77,7 +77,7 @@ export async function importFromJson(
  */
 async function mergeItem(
   itemId: string,
-  existing: { saveCount: number; lastSavedAt: number; createdAt: number; favoritedAt: number; deletedAt: number },
+  existing: { saveCount: number; lastSavedAt: number; createdAt: number; favoritedAt: number; deletedAt: number; favIconUrl: string | null },
   imported: ExportedItem
 ): Promise<void> {
   await db.items.update(itemId, {
@@ -91,6 +91,8 @@ async function mergeItem(
     favoritedAt: existing.favoritedAt || imported.favoritedAt || NOT_FAVORITED,
     // Resurrect if imported is not deleted
     deletedAt: imported.deletedAt ? existing.deletedAt : NOT_DELETED,
+    // Fill in favicon if existing has none
+    favIconUrl: existing.favIconUrl || imported.favIconUrl || null,
     updatedAt: Date.now(),
   });
 }
@@ -112,7 +114,7 @@ async function insertItem(
     normalizedUrl,
     title,
     domain,
-    favIconUrl: null, // Don't import stale favicons
+    favIconUrl: item.favIconUrl ?? null,
     createdAt: item.createdAt || now,
     lastSavedAt: item.lastSavedAt || now,
     saveCount: item.saveCount || 1,

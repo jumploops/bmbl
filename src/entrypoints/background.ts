@@ -1,5 +1,5 @@
 import { captureAllTabs, isCaptureInProgress } from '@/lib/capture/capture';
-import { resetIcon } from '@/lib/capture/icons';
+import { resetIcon, handleIconResetAlarm, ICON_RESET_ALARM } from '@/lib/capture/icons';
 import { initializeSettings } from '@/lib/settings';
 import { getLastCapture } from '@/lib/db/captures';
 import type { Message } from '@/types';
@@ -12,6 +12,13 @@ export default defineBackground(() => {
     console.log('Extension installed/updated:', details.reason);
     await initializeSettings();
     await resetIcon();
+  });
+
+  // Handle icon reset alarm (safety net for when service worker was terminated)
+  chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name === ICON_RESET_ALARM) {
+      await handleIconResetAlarm();
+    }
   });
 
   // Handle toolbar icon click

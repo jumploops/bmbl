@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useSettings } from '@/hooks/useSettings';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useImportExport } from '@/hooks/useImportExport';
+import { useDeleteAllData } from '@/hooks/useDeleteAllData';
 import { Toggle } from '@/components/ui/Toggle';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import type { ViewType, DarkMode } from '@/types';
 
 const VIEW_OPTIONS: { value: ViewType; label: string }[] = [
@@ -42,6 +44,36 @@ export default function App() {
     message,
     clearMessage,
   } = useImportExport();
+
+  // Delete all data state
+  const {
+    isModalOpen: isDeleteModalOpen,
+    openModal: openDeleteModal,
+    closeModal: closeDeleteModal,
+    counts: deleteCounts,
+    isLoadingCounts: isLoadingDeleteCounts,
+    confirmDelete,
+    isDeleting,
+    result: deleteResult,
+    clearResult: clearDeleteResult,
+  } = useDeleteAllData();
+
+  // Combined message display (import/export or delete)
+  const displayMessage = deleteResult?.success
+    ? `Deleted ${deleteResult.itemsDeleted} bookmarks`
+    : deleteResult?.error
+      ? deleteResult.error
+      : message;
+  const displayStatus = deleteResult?.success
+    ? 'success'
+    : deleteResult?.error
+      ? 'error'
+      : status;
+
+  const handleClearMessage = () => {
+    clearMessage();
+    clearDeleteResult();
+  };
 
   if (isLoading) {
     return (
@@ -151,18 +183,18 @@ export default function App() {
           </h2>
 
           {/* Status message */}
-          {message && (
+          {displayMessage && (
             <div
               className={`mb-4 p-3 rounded text-sm ${
-                status === 'success'
+                displayStatus === 'success'
                   ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
                   : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
               }`}
             >
               <div className="flex justify-between items-center">
-                <span>{message}</span>
+                <span>{displayMessage}</span>
                 <button
-                  onClick={clearMessage}
+                  onClick={handleClearMessage}
                   className="text-current hover:opacity-70 ml-2"
                 >
                   &times;
@@ -316,7 +348,60 @@ export default function App() {
               </div>
             )}
           </div>
+
+          {/* Delete All Data */}
+          <div className="py-3 border-t border-red-200 dark:border-red-900/50 mt-4">
+            <h3 className="font-medium mb-2 text-red-600 dark:text-red-400">
+              Danger Zone
+            </h3>
+            <p className="text-sm text-hn-text-secondary mb-3">
+              Permanently delete all your bookmarks and capture history.
+              This action cannot be undone.
+            </p>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={openDeleteModal}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete All Data'}
+            </Button>
+          </div>
         </section>
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={isDeleteModalOpen}
+          title="Delete All Data"
+          message={
+            isLoadingDeleteCounts ? (
+              <p>Loading...</p>
+            ) : (
+              <>
+                <p>Are you sure you want to delete all your data?</p>
+                <p className="mt-2 text-hn-text-secondary">
+                  This will permanently delete:
+                </p>
+                <ul className="mt-1 list-disc list-inside">
+                  <li>{deleteCounts?.items ?? 0} bookmarks</li>
+                  <li>{deleteCounts?.captures ?? 0} capture records</li>
+                </ul>
+                <p className="mt-3 text-hn-text-secondary">
+                  Tip: You can export your bookmarks first using the Export option above.
+                </p>
+                <p className="mt-2 font-medium text-red-600 dark:text-red-400">
+                  This action cannot be undone.
+                </p>
+              </>
+            )
+          }
+          confirmLabel="Delete Everything"
+          cancelLabel="Cancel"
+          variant="destructive"
+          isLoading={isDeleting}
+          onConfirm={confirmDelete}
+          onCancel={closeDeleteModal}
+        />
 
         {/* Troubleshooting Section */}
         <section className="mb-8">
