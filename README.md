@@ -331,4 +331,4 @@ Another extension may be overriding the new tab. Disable other new tab extension
 
 ## License
 
-ISC
+MIT

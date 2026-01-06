@@ -136,7 +136,7 @@ Before submission, manually test all core functionality:
 **Store Listing Text** (to prepare)
 
 ```
-Name: Bookmark Backlog
+Name: Bookmark Backlog (bmbl)
 Short Name: bmbl
 ```
 
@@ -145,59 +145,52 @@ Short Name: bmbl
 Save all tabs with one click. Triage your reading backlog with a Hacker News-style interface.
 ```
 
-**Description** (16,000 characters max):
+**Description** (16,000 characters max, plain text - no markdown):
 ```
-# Bookmark Backlog (bmbl)
-
 Save all your open tabs across all windows with a single click. No more tab hoarding anxiety—just click once to save everything, then review and prioritize at your own pace.
 
-## Features
+FEATURES
 
-• ONE-CLICK CAPTURE
-Click the bmbl icon to instantly save all open tabs. The extension captures URLs, titles, and favicons from every window in your browser.
+- One-click capture: Click the bmbl icon to instantly save all open tabs from every window
+- Hacker News-style interface: A clean, information-dense new tab page for your reading list
+- Smart deduplication: Same URL saved multiple times? It's tracked, not duplicated
+- Multiple views: Sort by newest, oldest, favorites, most frequent, or view hidden items
+- Favorites: Star important items to keep track of must-read content
+- Soft delete: Hide items you don't need, restore them anytime
+- Dark mode: Light, dark, or follow your system preference
+- Import & export: Back up as JSON or import from browser bookmark files
+- Privacy first: All data stays in your browser—no accounts, no cloud, no tracking
 
-• HACKER NEWS-STYLE INTERFACE
-Your new tab page becomes a clean, information-dense reading list. No clutter, no distractions—just your saved links organized the way you want.
+HOW IT WORKS
 
-• SMART DEDUPLICATION
-Saved the same page multiple times? bmbl tracks it, not duplicates it. See how often you've saved each URL.
+1. Click the bmbl icon in your toolbar to capture all open tabs
+2. Open any new tab to see your saved bookmarks
+3. Use the navigation to switch views: new, old, favorites, frequent, hidden
+4. Click the arrow to favorite, or "hide" to archive items you're done with
 
-• MULTIPLE VIEWS
-- New: Most recently saved items first
-- Old: Oldest items first
-- Favorites: Your starred must-reads
-- Frequent: Most-saved URLs
-- Hidden: Items you've archived
+PRIVACY
 
-• FAVORITES
-Star important items to add them to your favorites list. Never lose track of must-read content.
+Your data stays on your device. Period.
 
-• SOFT DELETE
-Hide items you don't need. They're not gone—restore them anytime from the hidden view.
+- All bookmarks are stored locally in your browser's IndexedDB
+- No accounts, no sign-ups, no cloud sync
+- No analytics, tracking, or external servers
+- No data is ever transmitted anywhere
+- Export anytime to take your data with you
 
-• DARK MODE
-Choose light mode, dark mode, or follow your system preference.
+PERMISSIONS EXPLAINED
 
-• IMPORT & EXPORT
-Back up your bookmarks as JSON. Import from bmbl exports or browser bookmark files.
+- tabs: Read URLs and titles when you click to capture
+- tabGroups: Preserve tab group names and colors
+- storage: Save your preferences
+- unlimitedStorage: Store large bookmark collections locally
+- alarms: Reset the toolbar icon after capture completes
 
-• PRIVACY FIRST
-All data stays in your browser. No accounts, no cloud sync, no tracking. Your browsing history is yours alone.
+TIPS
 
-## Permissions Explained
-
-• tabs: Read URLs and titles to capture your tabs
-• tabGroups: Read tab group names and colors
-• storage: Save your settings
-• unlimitedStorage: Store your bookmark backlog locally
-• alarms: Reset the toolbar icon after capture
-
-## Tips
-
-• Click the bmbl icon anytime to capture all open tabs
-• Use the "hide" action to archive items you've finished reading
-• Enable "Auto-close after save" in settings to close captured tabs automatically (pinned tabs are never closed)
-• Export your bookmarks regularly as a backup
+- Enable "Auto-close after save" in settings to close tabs after capturing (pinned tabs stay open)
+- Export your bookmarks regularly as a backup
+- Use the "frequent" view to find pages you keep coming back to
 ```
 
 **Category**: Productivity
@@ -406,15 +399,25 @@ Required to reset the toolbar icon back to its default state after a capture com
 | Authentication information | ❌ No | No passwords or credentials stored |
 | Personal communications | ❌ No | We don't access emails, messages |
 | Location | ❌ No | No GPS, IP tracking, or location data |
-| **Web history** | ✅ **Yes** | We store URLs, titles, and timestamps of tabs users explicitly save |
+| Web history | ❌ No | See analysis below |
 | User activity | ❌ No | No click tracking, mouse position, keystroke logging |
 | Website content | ❌ No | We store URLs/titles only, not page content |
 
-**Important note on "Web history"**: While we DO check this box because we store URLs and page titles, our privacy policy makes clear that:
-- Data is ONLY saved when user explicitly clicks to capture
-- ALL data stays LOCAL in IndexedDB
-- Data is NEVER transmitted externally
-- Users can export or delete their data anytime
+**Why "Web history" is NOT checked:**
+
+The data usage disclosure is meant for extensions that **collect** data (implying potential transmission/sharing). bmbl does NOT collect web history:
+
+1. **User-initiated** — Users explicitly click to save tabs; no passive tracking
+2. **Local-only storage** — Data stays in browser's IndexedDB, never transmitted
+3. **No external servers** — No APIs, no cloud sync, no analytics
+4. **User controls data** — Users can export or delete anytime
+
+This is analogous to a notes app not checking "Personal communications" — the user creates and stores their own content locally. Checking "Web history" would mislead users into thinking the extension tracks their browsing.
+
+Transparency is provided through:
+- Single Purpose description mentions "stored locally in the browser"
+- Privacy Policy explains exactly what local data is stored
+- Permission justifications explain `tabs` is only used on user action
 
 14. [ ] **Certifications** (check all three):
     - [x] "I do not sell or transfer user data to third parties, outside of the approved use cases"
@@ -427,6 +430,25 @@ All three certifications are TRUE because:
 - No data is ever transmitted anywhere
 
 15. [ ] **Privacy Policy URL**: Enter the hosted URL (see Section 4)
+
+### 6.3.1 Test Instructions
+
+Enter the following in the "Test instructions" field (under 500 chars):
+
+```
+No login required.
+
+1. Open 3+ tabs with different websites
+2. Click the bmbl toolbar icon to capture
+3. Open a new tab - saved bookmarks appear
+4. Test views: new, old, favorites, frequent, hidden
+5. Click ▲ to favorite, "hide" to archive, "restore" to unhide
+6. Right-click icon → Options to test settings
+
+Optional: Enable "Auto-close after save" in settings, then capture - unpinned tabs close, pinned tabs stay.
+```
+
+(~440 characters)
 
 ### 6.4 Distribution Tab
 

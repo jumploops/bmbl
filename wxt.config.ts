@@ -4,7 +4,7 @@ export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   srcDir: 'src',
   manifest: {
-    name: 'Bookmark Backlog',
+    name: 'Bookmark Backlog (bmbl)',
     short_name: 'bmbl',
     description: 'Save all tabs with one click. Triage your reading backlog.',
     version: '0.0.1',
