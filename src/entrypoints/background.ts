@@ -5,11 +5,8 @@ import { getLastCapture } from '@/lib/db/captures';
 import type { Message } from '@/types';
 
 export default defineBackground(() => {
-  console.log('bmbl background script loaded');
-
   // Initialize settings on install
-  chrome.runtime.onInstalled.addListener(async (details) => {
-    console.log('Extension installed/updated:', details.reason);
+  chrome.runtime.onInstalled.addListener(async () => {
     await initializeSettings();
     await resetIcon();
   });
@@ -23,16 +20,12 @@ export default defineBackground(() => {
 
   // Handle toolbar icon click
   chrome.action.onClicked.addListener(async () => {
-    console.log('Toolbar icon clicked');
-
     if (isCaptureInProgress()) {
-      console.log('Capture already in progress, ignoring click');
       return;
     }
 
     try {
-      const result = await captureAllTabs();
-      console.log('Capture complete:', result);
+      await captureAllTabs();
 
       // Signal capture complete via storage (for live refresh in new tab pages)
       await chrome.storage.local.set({ lastCaptureTime: Date.now() });
@@ -45,8 +38,6 @@ export default defineBackground(() => {
   // Handle messages from new tab page
   chrome.runtime.onMessage.addListener(
     (message: Message, _sender, sendResponse): boolean => {
-      console.log('Received message:', message);
-
       if (message.type === 'CAPTURE_ALL_TABS') {
         if (isCaptureInProgress()) {
           sendResponse({ error: 'Capture already in progress' });

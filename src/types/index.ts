@@ -158,6 +158,6 @@ export interface GetLastCaptureMessage {
   type: 'GET_LAST_CAPTURE';
 }
 
-export type Message = CaptureMessage | GetLastCaptureMessage;
+export type Message = CaptureMessage | CaptureResultMessage | GetLastCaptureMessage;
 
 export type MessageResponse = CaptureResult | Capture | null;

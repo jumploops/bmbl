@@ -77,3 +77,29 @@ export function generateTitleFallback(url: string): string {
     return url;
   }
 }
+
+/**
+ * Validate a favicon URL for safe rendering
+ * - Allows http/https URLs
+ * - Allows data:image/* URLs up to 64KB
+ * - Rejects all other schemes
+ */
+const MAX_DATA_URL_LENGTH = 65536; // 64KB
+
+export function isValidFaviconUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+
+  // Check for data URLs
+  if (url.startsWith('data:')) {
+    // Must be an image type and within size limit
+    return url.startsWith('data:image/') && url.length <= MAX_DATA_URL_LENGTH;
+  }
+
+  // Check for http/https
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}

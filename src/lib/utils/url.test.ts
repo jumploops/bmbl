@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isCapturableUrl, normalizeUrl, extractDomain, generateTitleFallback } from './url';
+import { isCapturableUrl, normalizeUrl, extractDomain, generateTitleFallback, isValidFaviconUrl } from './url';
 
 describe('isCapturableUrl', () => {
   it('allows http URLs', () => {
@@ -91,5 +91,48 @@ describe('generateTitleFallback', () => {
 
   it('strips www', () => {
     expect(generateTitleFallback('https://www.example.com/page')).toBe('example.com/page');
+  });
+});
+
+describe('isValidFaviconUrl', () => {
+  it('allows https URLs', () => {
+    expect(isValidFaviconUrl('https://example.com/favicon.ico')).toBe(true);
+  });
+
+  it('allows http URLs', () => {
+    expect(isValidFaviconUrl('http://example.com/favicon.png')).toBe(true);
+  });
+
+  it('allows small data:image URLs', () => {
+    expect(isValidFaviconUrl('data:image/png;base64,iVBORw0KGgo=')).toBe(true);
+  });
+
+  it('rejects data URLs that are not images', () => {
+    expect(isValidFaviconUrl('data:text/html,<script>alert(1)</script>')).toBe(false);
+  });
+
+  it('rejects data:image URLs over 64KB', () => {
+    const largeDataUrl = 'data:image/png;base64,' + 'A'.repeat(70000);
+    expect(isValidFaviconUrl(largeDataUrl)).toBe(false);
+  });
+
+  it('rejects javascript: URLs', () => {
+    expect(isValidFaviconUrl('javascript:alert(1)')).toBe(false);
+  });
+
+  it('rejects file: URLs', () => {
+    expect(isValidFaviconUrl('file:///etc/passwd')).toBe(false);
+  });
+
+  it('rejects null', () => {
+    expect(isValidFaviconUrl(null)).toBe(false);
+  });
+
+  it('rejects undefined', () => {
+    expect(isValidFaviconUrl(undefined)).toBe(false);
+  });
+
+  it('rejects empty string', () => {
+    expect(isValidFaviconUrl('')).toBe(false);
   });
 });

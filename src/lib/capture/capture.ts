@@ -48,7 +48,7 @@ export async function captureAllTabs(): Promise<CaptureResult> {
     ]);
 
     const groupMap = buildGroupMap(allGroups);
-    const { capturableTabs, skippedCount } = filterAndTransformTabs(allTabs, groupMap);
+    const { capturableTabs, skippedCount } = filterAndTransformTabs(allTabs);
 
     // Aggregate tabs by URL to handle duplicates
     const aggregatedTabs = aggregateTabsByUrl(capturableTabs, groupMap);

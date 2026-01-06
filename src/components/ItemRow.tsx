@@ -1,5 +1,6 @@
 import { Globe } from 'lucide-react';
 import { formatRelativeTime, formatAbsoluteTime } from '@/lib/utils/time';
+import { isValidFaviconUrl } from '@/lib/utils/url';
 import type { Item, ViewType } from '@/types';
 import { NOT_FAVORITED } from '@/types';
 
@@ -63,9 +64,9 @@ export function ItemRow({
         <div className="flex items-start gap-1">
           {/* Favicon */}
           {showFavicons && (
-            item.favIconUrl ? (
+            isValidFaviconUrl(item.favIconUrl) ? (
               <img
-                src={item.favIconUrl}
+                src={item.favIconUrl!}
                 alt=""
                 className="w-4 h-4 shrink-0 mt-0.5"
                 onError={(e) => {
@@ -96,7 +97,7 @@ export function ItemRow({
         </div>
 
         {/* Line 2: Metadata + Actions */}
-        <div className="text-[8pt] text-hn-text-secondary flex items-center gap-1 mt-0.5">
+        <div className="text-[8pt] text-hn-text-secondary flex items-center gap-1">
           <span>{item.saveCount} save{item.saveCount !== 1 ? 's' : ''}</span>
 
           <span title={formatAbsoluteTime(item.lastSavedAt)}>

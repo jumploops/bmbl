@@ -40,8 +40,7 @@ export function buildGroupMap(groups: chrome.tabGroups.TabGroup[]): Map<number, 
  * Returns both capturable tabs and skipped count
  */
 export function filterAndTransformTabs(
-  tabs: chrome.tabs.Tab[],
-  _groupMap: Map<number, TabGroupInfo>
+  tabs: chrome.tabs.Tab[]
 ): { capturableTabs: TabInfo[]; skippedCount: number } {
   const capturableTabs: TabInfo[] = [];
   let skippedCount = 0;
