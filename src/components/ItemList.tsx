@@ -6,6 +6,7 @@ import type { Item, ViewType } from '@/types';
 interface ItemListProps {
   items: Item[];
   view: ViewType;
+  showFavicons: boolean;
   isLoading: boolean;
   hasMore: boolean;
   startRank?: number;
@@ -19,6 +20,7 @@ interface ItemListProps {
 export function ItemList({
   items,
   view,
+  showFavicons,
   isLoading,
   hasMore,
   startRank = 1,
@@ -56,6 +58,7 @@ export function ItemList({
           item={item}
           rank={startRank + index}
           view={view}
+          showFavicons={showFavicons}
           onFavorite={() => onFavorite(item.itemId)}
           onUnfavorite={() => onUnfavorite(item.itemId)}
           onHide={() => onHide(item.itemId)}

@@ -109,7 +109,7 @@ export default function App() {
           </h2>
 
           {/* Dark mode setting */}
-          <div className="flex items-start justify-between py-3">
+          <div className="flex items-start justify-between py-3 border-b border-gray-100 dark:border-gray-700">
             <div className="flex-1 pr-4">
               <label htmlFor="darkMode" className="font-medium">
                 Theme
@@ -123,6 +123,23 @@ export default function App() {
               value={settings.darkMode}
               onChange={(value) => updateSetting('darkMode', value)}
               options={DARK_MODE_OPTIONS}
+            />
+          </div>
+
+          {/* Show favicons setting */}
+          <div className="flex items-start justify-between py-3">
+            <div className="flex-1 pr-4">
+              <label htmlFor="showFavicons" className="font-medium cursor-pointer">
+                Show favicons
+              </label>
+              <p className="text-sm text-hn-text-secondary mt-1">
+                Display site icons next to bookmark titles.
+              </p>
+            </div>
+            <Toggle
+              id="showFavicons"
+              checked={settings.showFavicons}
+              onChange={(value) => updateSetting('showFavicons', value)}
             />
           </div>
         </section>
@@ -184,14 +201,14 @@ export default function App() {
           <div className="py-3">
             <h3 className="font-medium mb-2">Import Bookmarks</h3>
             <p className="text-sm text-hn-text-secondary mb-3">
-              Import bookmarks from a bmbl export file.
+              Import from a bmbl export or browser bookmark file (Chrome, Firefox, Safari, Edge).
             </p>
 
             {/* Hidden file input */}
             <input
               ref={fileInputRef}
               type="file"
-              accept=".json"
+              accept=".json,.html,.htm"
               onChange={handleFileSelect}
               className="hidden"
             />

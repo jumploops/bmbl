@@ -24,6 +24,7 @@ interface ItemRowProps {
   item: Item;
   rank: number;
   view: ViewType;
+  showFavicons: boolean;
   onFavorite: () => void;
   onUnfavorite: () => void;
   onHide: () => void;
@@ -34,6 +35,7 @@ export function ItemRow({
   item,
   rank,
   view,
+  showFavicons,
   onFavorite,
   onUnfavorite,
   onHide,
@@ -60,17 +62,19 @@ export function ItemRow({
         {/* Line 1: Title + Domain */}
         <div className="flex items-start gap-1">
           {/* Favicon */}
-          {item.favIconUrl ? (
-            <img
-              src={item.favIconUrl}
-              alt=""
-              className="w-4 h-4 shrink-0 mt-0.5"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          ) : (
-            <Globe size={14} className="text-hn-text-secondary shrink-0 mt-0.5" />
+          {showFavicons && (
+            item.favIconUrl ? (
+              <img
+                src={item.favIconUrl}
+                alt=""
+                className="w-4 h-4 shrink-0 mt-0.5"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <Globe size={14} className="text-hn-text-secondary shrink-0 mt-0.5" />
+            )
           )}
 
           {/* Title + Domain wrapper */}

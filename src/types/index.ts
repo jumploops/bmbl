@@ -75,6 +75,7 @@ export interface Settings {
   resurfaceHiddenOnRecapture: boolean;
   defaultView: ViewType;
   darkMode: DarkMode;
+  showFavicons: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -82,6 +83,7 @@ export const DEFAULT_SETTINGS: Settings = {
   resurfaceHiddenOnRecapture: false,
   defaultView: 'new',
   darkMode: 'system',
+  showFavicons: true,
 };
 
 // ============================================

@@ -9,7 +9,7 @@ import { useDarkMode } from '@/hooks/useDarkMode';
 import { useCaptureListener } from '@/hooks/useCaptureListener';
 import { useSettings } from '@/hooks/useSettings';
 
-function NewTabContent() {
+function NewTabContent({ showFavicons }: { showFavicons: boolean }) {
   const { currentView, isLoading: viewLoading } = useView();
   const {
     items,
@@ -61,6 +61,7 @@ function NewTabContent() {
       <ItemList
         items={items}
         view={currentView}
+        showFavicons={showFavicons}
         isLoading={isLoading}
         hasMore={hasMore}
         onLoadMore={loadMore}
@@ -82,7 +83,7 @@ export default function App() {
       <div className="min-h-screen bg-hn-bg text-hn-text dark:bg-hn-bg dark:text-hn-text font-[family-name:var(--font-hn)] text-[10pt]">
         <div className="w-full lg:w-[85%] mx-auto bg-hn-content-bg pt-2">
           <Header />
-          <NewTabContent />
+          <NewTabContent showFavicons={settings.showFavicons} />
         </div>
       </div>
     </ViewProvider>
