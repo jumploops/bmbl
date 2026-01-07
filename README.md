@@ -4,6 +4,10 @@
 
 bmbl is a Chrome extension that captures all open tabs across all windows and displays them in a Hacker News-style new tab page. No more tab hoarding anxiety—just click once to save everything, then review and prioritize at your own pace.
 
+<p align="center">
+  <img src="public/screenshots/screenshot_1_dark.png" alt="bmbl screenshot - dark mode" width="800">
+</p>
+
 ## Features
 
 - **One-click capture**: Save all open tabs across all windows instantly
