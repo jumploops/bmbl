@@ -8,6 +8,12 @@ bmbl is a Chrome extension that captures all open tabs across all windows and di
   <img src="public/screenshots/bmbl_demo.gif" alt="bmbl demo" width="800">
 </p>
 
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/bookmark-backlog-bmbl/ahfjgbepoipmidpnidifmpgcmedegcib">
+    <img src="https://developer.chrome.com/static/docs/webstore/branding/image/UV4C4ybeBTsZt43U4xis.png" alt="Available in the Chrome Web Store" height="58">
+  </a>
+</p>
+
 ## Features
 
 - **One-click capture**: Save all open tabs across all windows instantly
